@@ -1,0 +1,22 @@
+{
+  "name": "china-southern-power-grid-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "China Southern Power Grid (CSG) account query service, supporting both Model Context Protocol (MCP) server and zero-dependency Skill package.",
+  "main": "mcp/server.js",
+  "scripts": {
+    "login": "tsx src/login.ts",
+    "start": "tsx src/server.ts",
+    "query": "tsx src/cli.ts",
+    "build": "tsc && esbuild src/cli.ts --bundle --platform=node --outfile=skills/china-southern-power-grid-stat/scripts/cli.cjs && node -e \"const fs = require('fs'); if (fs.existsSync('session.json')) { fs.copyFileSync('session.json', 'skills/china-southern-power-grid-stat/session.json'); console.log('Successfully copied session.json to Skill folder.'); }\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
