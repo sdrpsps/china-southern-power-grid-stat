@@ -66,8 +66,8 @@ pnpm run build
 2. 点击 **+ Add New MCP Server**：
    - **Name**: `china-southern-power-grid`
    - **Type**: `command`
-   - **Command**: `npx tsx /Users/sunny/Documents/electric/src/server.ts`
-     _(请务必将路径替换为您本机项目的实际绝对路径。并且在执行此命令前，确保已成功运行 `pnpm run login` 生成了 `session.json`)_
+   - **Command**: `node [项目绝对路径]/mcp/server.js`
+     _(请务必将 [项目绝对路径] 替换为您本机项目的实际绝对路径。并且在执行此命令前，确保已成功运行 `pnpm run login` 生成了 `session.json`，且已执行 `pnpm build` 完成了编译)_
 3. 保存并确认指示灯为绿色。
 
 ### 2. Claude Desktop 配置方式
@@ -78,8 +78,8 @@ pnpm run build
 {
   "mcpServers": {
     "china-southern-power-grid": {
-      "command": "npx",
-      "args": ["tsx", "/Users/sunny/Documents/electric/src/server.ts"],
+      "command": "node",
+      "args": ["[项目绝对路径]/mcp/server.js"],
       "env": {
         "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
       }
