@@ -28,7 +28,7 @@
 确保你的开发环境中已安装 Node.js (建议 v18+) 和 `pnpm` 包管理器。在根目录下执行：
 
 ```bash
-pnpm run install
+pnpm install
 ```
 
 ### 2. 命令行交互登录 (生成凭证)
