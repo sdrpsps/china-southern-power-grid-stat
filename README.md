@@ -5,7 +5,7 @@
 1. **MCP 模式**：作为后台常驻进程，供 **Cursor**、**Claude Desktop** 等 AI 客户端直接作为 Tools 隐式调用。
 2. **Skill 模式**：提供完全纯粹、零第三方依赖且包含登录凭证的独立技能包（仅含 `SKILL.md` 和 `cli.cjs` 脚本），可直接拷贝到 **OpenClaw** 等本地 Agent 系统中直接零依赖直接调用。
 
-![image](https://i.111666.best/image/H31G7sDcGWgKRRTAxMJAKQ.png)
+![image](https://cdn.nodeimage.com/i/8OWxL84oOIE0xesjVrgXSYnceQQXXj16.webp)
 
 ---
 
