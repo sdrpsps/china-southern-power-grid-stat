@@ -11,7 +11,6 @@ export type ProfileSelector = {
   profile?: string;
   allProfiles?: boolean;
   sessionPath?: string;
-  skillDir?: string;
 };
 
 export type CSGProfile = {
@@ -20,17 +19,12 @@ export type CSGProfile = {
   sessionPath: string;
   createdAt: string;
   updatedAt: string;
-  source?: "registry" | "explicit-session" | "legacy-session";
+  source?: "registry" | "explicit-session";
 };
 
 export type ProfileRegistry = {
   defaultProfile?: string;
   profiles: CSGProfile[];
-};
-
-export type SessionResolution = {
-  sessionPath: string;
-  source: "explicit" | "env" | "skill-local" | "legacy-cwd" | "legacy-module";
 };
 
 export function validateProfileAlias(alias: string): string {
@@ -185,36 +179,16 @@ export async function writeProfileRegistry(
   );
 }
 
-export function findLegacySessionPath(skillDir?: string): SessionResolution | null {
+function getEnvSessionPath(): string | null {
   const envSession = process.env[SESSION_FILE_ENV];
   if (envSession && fs.existsSync(path.resolve(envSession))) {
-    return { sessionPath: path.resolve(envSession), source: "env" };
+    return path.resolve(envSession);
   }
-
-  const candidates: Array<{ sessionPath: string; source: SessionResolution["source"] }> = [];
-  if (skillDir) {
-    candidates.push({
-      sessionPath: path.resolve(skillDir, "session.json"),
-      source: "skill-local",
-    });
-  }
-  candidates.push(
-    { sessionPath: path.resolve(process.cwd(), "session.json"), source: "legacy-cwd" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "../session.json"), source: "legacy-module" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "session.json"), source: "legacy-module" },
-  );
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate.sessionPath)) {
-      return candidate;
-    }
-  }
-
   return null;
 }
 
 export async function listProfiles(
-  options: { includeLegacy?: boolean; skillDir?: string } = {},
+  options: { includeExplicitEnv?: boolean } = {},
 ): Promise<CSGProfile[]> {
   const registry = await readProfileRegistry();
   const profiles: CSGProfile[] = registry.profiles.map((profile) => ({
@@ -222,17 +196,17 @@ export async function listProfiles(
     source: "registry",
   }));
 
-  if (profiles.length === 0 && options.includeLegacy !== false) {
-    const legacy = findLegacySessionPath(options.skillDir);
-    if (legacy) {
+  if (profiles.length === 0 && options.includeExplicitEnv !== false) {
+    const envSessionPath = getEnvSessionPath();
+    if (envSessionPath) {
       const now = new Date().toISOString();
       profiles.push({
-        alias: "default",
-        label: "旧版会话",
-        sessionPath: legacy.sessionPath,
+        alias: "session",
+        label: "环境变量会话",
+        sessionPath: envSessionPath,
         createdAt: now,
         updatedAt: now,
-        source: "legacy-session",
+        source: "explicit-session",
       });
     }
   }
@@ -257,8 +231,23 @@ export async function resolveProfiles(
     ];
   }
 
+  const envSessionPath = getEnvSessionPath();
+  if (envSessionPath) {
+    const now = new Date().toISOString();
+    return [
+      {
+        alias: "session",
+        label: "环境变量会话",
+        sessionPath: envSessionPath,
+        createdAt: now,
+        updatedAt: now,
+        source: "explicit-session",
+      },
+    ];
+  }
+
   const registry = await readProfileRegistry();
-  const profiles = await listProfiles({ includeLegacy: true, skillDir: selector.skillDir });
+  const profiles = await listProfiles({ includeExplicitEnv: false });
 
   if (selector.allProfiles) {
     if (profiles.length === 0) {

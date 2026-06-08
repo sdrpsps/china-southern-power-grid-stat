@@ -221,8 +221,7 @@ node ./scripts/cli.cjs --action=verify --all-profiles
 
 1. `--session=/path/to/session.json`
 2. 环境变量 `CSG_SESSION_FILE`
-3. Skill 本地 `.csg/` 用户配置注册表
-4. 兼容旧版的 `session.json`
+3. 本地 `.csg/` 用户配置注册表
 
 ## 开发结构
 

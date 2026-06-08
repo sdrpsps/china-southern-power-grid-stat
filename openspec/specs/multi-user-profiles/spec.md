@@ -17,6 +17,12 @@ TBD - created by archiving change standardize-mcp-skill-packaging. Update Purpos
 - **THEN** 系统优先查找运行文件同级 `.csg/profiles.json`
 - **AND** 源码开发运行时优先使用项目根目录 `.csg/profiles.json`
 
+#### Scenario: 忽略隐式旧版会话文件
+- **WHEN** 不存在用户配置注册表
+- **AND** 当前工作目录、运行文件同级目录或运行文件上级目录存在 loose `session.json`
+- **THEN** 系统不得自动创建 `legacy-session` 用户配置
+- **AND** 未显式指定会话路径的调用返回无可用会话错误
+
 #### Scenario: 用户配置别名重复
 - **WHEN** 用户尝试创建或重命名到已被其他用户配置使用的别名
 - **THEN** 系统拒绝该变更
@@ -88,4 +94,3 @@ TBD - created by archiving change standardize-mcp-skill-packaging. Update Purpos
 - **WHEN** 助手报告多个用户配置的查询结果
 - **THEN** 使用别名或显示标签标识用户配置
 - **AND** 除非用户明确要求完整详情，否则遮蔽完整户号、地址和用户名
-

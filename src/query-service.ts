@@ -102,7 +102,6 @@ export function normalizeProfileSelector(input: {
   profile?: unknown;
   allProfiles?: unknown;
   sessionPath?: unknown;
-  skillDir?: string;
 }): ProfileSelector {
   return {
     profile:
@@ -117,12 +116,11 @@ export function normalizeProfileSelector(input: {
       typeof input.sessionPath === "string" && input.sessionPath.trim()
         ? input.sessionPath
         : undefined,
-    skillDir: input.skillDir,
   };
 }
 
 export async function listProfiles(): Promise<{ profiles: PublicProfile[] }> {
-  const profiles = await listStoredProfiles({ includeLegacy: true });
+  const profiles = await listStoredProfiles({ includeExplicitEnv: true });
   return { profiles: profiles.map(toPublicProfile) };
 }
 

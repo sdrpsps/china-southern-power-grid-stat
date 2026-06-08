@@ -22,9 +22,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// src/cli.ts
-var path2 = __toESM(require("path"), 1);
-
 // src/profile.ts
 var fs = __toESM(require("fs"), 1);
 var path = __toESM(require("path"), 1);
@@ -146,14 +143,14 @@ var CSGClient = class _CSGClient {
   /**
    * 发起 HTTP 请求
    */
-  async makeRequest(path3, payload, options = {}) {
+  async makeRequest(path2, payload, options = {}) {
     const {
       withAuth = true,
       method = "POST",
       customHeaders = {},
       basePath = BASE_PATH_APP
     } = options;
-    const url = basePath + path3;
+    const url = basePath + path2;
     const headers = {
       "Host": "95598.csg.cn",
       "Content-Type": "application/json;charset=utf-8",
@@ -195,37 +192,37 @@ var CSGClient = class _CSGClient {
   /**
    * 处理不成功的接口响应
    */
-  handleUnsuccessfulResponse(path3, responseData) {
+  handleUnsuccessfulResponse(path2, responseData) {
     const sta = responseData[JSON_KEY_STA];
     const msg = responseData[JSON_KEY_MESSAGE] || "\u672A\u77E5\u9519\u8BEF";
-    throw new Error(`\u63A5\u53E3\u9519\u8BEF [${path3}] (sta=${sta}): ${msg}`);
+    throw new Error(`\u63A5\u53E3\u9519\u8BEF [${path2}] (sta=${sta}): ${msg}`);
   }
   // === 原始接口请求 ===
   /**
    * 发送登录短信验证码
    */
   async apiSendLoginSms(phoneNo) {
-    const path3 = "center/sendMsg";
+    const path2 = "center/sendMsg";
     const payload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
       "phoneNumber": phoneNo,
       "vcType": VERIFICATION_CODE_TYPE_LOGIN,
       "msgType": SEND_MSG_TYPE_VERIFICATION_CODE
     };
-    const { data } = await this.makeRequest(path3, payload, {
+    const { data } = await this.makeRequest(path2, payload, {
       withAuth: false
     });
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return true;
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     return false;
   }
   /**
    * 创建登录二维码
    */
   async apiCreateLoginQrCode(channel, loginId) {
-    const path3 = "center/createLoginQrcode";
+    const path2 = "center/createLoginQrcode";
     const finalLoginId = loginId || generateQrLoginId();
     const payload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
@@ -233,26 +230,26 @@ var CSGClient = class _CSGClient {
       "lgoinId": finalLoginId
       // 上游接口包含拼写错误
     };
-    const { data } = await this.makeRequest(path3, payload, {
+    const { data } = await this.makeRequest(path2, payload, {
       withAuth: false,
       basePath: BASE_PATH_WEB
     });
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return { loginId: finalLoginId, qrUrl: data[JSON_KEY_DATA] };
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     throw new Error("\u521B\u5EFA\u767B\u5F55\u4E8C\u7EF4\u7801\u5931\u8D25");
   }
   /**
    * 获取扫码登录状态
    */
   async apiGetQrLoginStatus(loginId) {
-    const path3 = "center/getLoginInfo";
+    const path2 = "center/getLoginInfo";
     const payload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
       "loginId": loginId
     };
-    const { headers, data } = await this.makeRequest(path3, payload, {
+    const { headers, data } = await this.makeRequest(path2, payload, {
       withAuth: false,
       basePath: BASE_PATH_WEB
     });
@@ -265,14 +262,14 @@ var CSGClient = class _CSGClient {
     if (data[JSON_KEY_STA] === RESP_STA_QR_NOT_SCANNED) {
       return { success: false, authToken: "" };
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     return { success: false, authToken: "" };
   }
   /**
    * 使用手机号和短信验证码登录
    */
   async apiLoginWithSmsCode(phoneNo, smsCode) {
-    const path3 = "center/login";
+    const path2 = "center/login";
     const innerPayload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
       [JSON_KEY_ACCT_ID]: phoneNo,
@@ -281,21 +278,21 @@ var CSGClient = class _CSGClient {
       [JSON_KEY_SMS_CODE]: smsCode
     };
     const payload = { [JSON_KEY_PARAM]: encryptParams(innerPayload) };
-    const { headers, data } = await this.makeRequest(path3, payload, {
+    const { headers, data } = await this.makeRequest(path2, payload, {
       withAuth: false,
       customHeaders: { "need-crypto": "true" }
     });
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return headers.get(HEADER_X_AUTH_TOKEN) || "";
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     throw new Error("\u77ED\u4FE1\u9A8C\u8BC1\u7801\u767B\u5F55\u5931\u8D25");
   }
   /**
    * 使用手机号、密码和短信验证码登录
    */
   async apiLoginWithPasswordAndSmsCode(phoneNo, password, smsCode) {
-    const path3 = "center/loginByPwdAndMsg";
+    const path2 = "center/loginByPwdAndMsg";
     const innerPayload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
       [JSON_KEY_ACCT_ID]: phoneNo,
@@ -306,55 +303,55 @@ var CSGClient = class _CSGClient {
       "checkPwd": true
     };
     const payload = { [JSON_KEY_PARAM]: encryptParams(innerPayload) };
-    const { headers, data } = await this.makeRequest(path3, payload, {
+    const { headers, data } = await this.makeRequest(path2, payload, {
       withAuth: false,
       customHeaders: { "need-crypto": "true" }
     });
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return headers.get(HEADER_X_AUTH_TOKEN) || "";
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     throw new Error("\u8D26\u53F7\u5BC6\u7801+\u77ED\u4FE1\u9A8C\u8BC1\u7801\u767B\u5F55\u5931\u8D25");
   }
   /**
    * 验证身份状态接口
    */
   async apiQueryAuthenticationResult() {
-    const path3 = "user/queryAuthenticationResult";
-    const { data } = await this.makeRequest(path3, null);
+    const path2 = "user/queryAuthenticationResult";
+    const { data } = await this.makeRequest(path2, null);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 获取用户信息
    */
   async apiGetUserInfo() {
-    const path3 = "user/getUserInfo";
-    const { data } = await this.makeRequest(path3, null);
+    const path2 = "user/getUserInfo";
+    const { data } = await this.makeRequest(path2, null);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 获取账号绑定的用电户列表
    */
   async apiGetAllLinkedElectricityAccounts() {
-    const path3 = "eleCustNumber/queryBindEleUsers";
-    const { data } = await this.makeRequest(path3, {});
+    const path2 = "eleCustNumber/queryBindEleUsers";
+    const { data } = await this.makeRequest(path2, {});
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA] || [];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
     return [];
   }
   /**
    * 查询用电计量点（即表计点）
    */
   async apiGetMeteringPoint(areaCode, eleCustomerId) {
-    const path3 = "charge/queryMeteringPoint";
+    const path2 = "charge/queryMeteringPoint";
     const payload = {
       [JSON_KEY_AREA_CODE]: areaCode,
       "eleCustNumberList": [
@@ -364,92 +361,92 @@ var CSGClient = class _CSGClient {
         }
       ]
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 获取账户电费余额与欠费
    */
   async apiQueryAccountSurplus(areaCode, eleCustomerId) {
-    const path3 = "charge/queryUserAccountNumberSurplus";
+    const path2 = "charge/queryUserAccountNumberSurplus";
     const payload = {
       [JSON_KEY_AREA_CODE]: areaCode,
       [JSON_KEY_ELE_CUST_ID]: eleCustomerId
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 查询当月每日用电电量 (kWh)
    */
   async apiQueryDayElectricByMPoint(year, month, areaCode, eleCustomerId, meteringPointId) {
-    const path3 = "charge/queryDayElectricByMPoint";
+    const path2 = "charge/queryDayElectricByMPoint";
     const payload = {
       [JSON_KEY_AREA_CODE]: areaCode,
       [JSON_KEY_ELE_CUST_ID]: eleCustomerId,
       [JSON_KEY_YEAR_MONTH]: `${year}${String(month).padStart(2, "0")}`,
       [JSON_KEY_METERING_POINT_ID]: meteringPointId
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 查询当月每日用电电费与电量详情
    */
   async apiQueryDayElectricChargeByMPoint(year, month, areaCode, eleCustomerId, meteringPointId) {
-    const path3 = "charge/queryDayElectricChargeByMPoint";
+    const path2 = "charge/queryDayElectricChargeByMPoint";
     const payload = {
       [JSON_KEY_AREA_CODE]: areaCode,
       [JSON_KEY_ELE_CUST_ID]: eleCustomerId,
       [JSON_KEY_YEAR_MONTH]: `${year}${String(month).padStart(2, "0")}`,
       [JSON_KEY_METERING_POINT_ID]: meteringPointId
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 获取年度统计数据
    */
   async apiGetFeeAnalyzeDetails(year, areaCode, eleCustomerId) {
-    const path3 = "charge/getAnalyzeFeeDetails";
+    const path2 = "charge/getAnalyzeFeeDetails";
     const payload = {
       [JSON_KEY_AREA_CODE]: areaCode,
       "electricityBillYear": year,
       [JSON_KEY_ELE_CUST_ID]: eleCustomerId,
       [JSON_KEY_METERING_POINT_ID]: null
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   /**
    * 查询昨日用电量 (kWh)
    */
   async apiQueryDayElectricByMPointYesterday(areaCode, eleCustomerId) {
-    const path3 = "charge/queryDayElectricByMPointYesterday";
+    const path2 = "charge/queryDayElectricByMPointYesterday";
     const payload = {
       [JSON_KEY_ELE_CUST_ID]: eleCustomerId,
       [JSON_KEY_AREA_CODE]: areaCode
     };
-    const { data } = await this.makeRequest(path3, payload);
+    const { data } = await this.makeRequest(path2, payload);
     if (data[JSON_KEY_STA] === RESP_STA_SUCCESS) {
       return data[JSON_KEY_DATA];
     }
-    this.handleUnsuccessfulResponse(path3, data);
+    this.handleUnsuccessfulResponse(path2, data);
   }
   // === 高层封装与实用方法 ===
   /**
@@ -719,27 +716,10 @@ async function readProfileRegistry(registryPath = getDefaultRegistryPath()) {
     }))
   };
 }
-function findLegacySessionPath(skillDir) {
+function getEnvSessionPath() {
   const envSession = process.env[SESSION_FILE_ENV];
   if (envSession && fs.existsSync(path.resolve(envSession))) {
-    return { sessionPath: path.resolve(envSession), source: "env" };
-  }
-  const candidates = [];
-  if (skillDir) {
-    candidates.push({
-      sessionPath: path.resolve(skillDir, "session.json"),
-      source: "skill-local"
-    });
-  }
-  candidates.push(
-    { sessionPath: path.resolve(process.cwd(), "session.json"), source: "legacy-cwd" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "../session.json"), source: "legacy-module" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "session.json"), source: "legacy-module" }
-  );
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate.sessionPath)) {
-      return candidate;
-    }
+    return path.resolve(envSession);
   }
   return null;
 }
@@ -749,17 +729,17 @@ async function listProfiles(options = {}) {
     ...profile,
     source: "registry"
   }));
-  if (profiles.length === 0 && options.includeLegacy !== false) {
-    const legacy = findLegacySessionPath(options.skillDir);
-    if (legacy) {
+  if (profiles.length === 0 && options.includeExplicitEnv !== false) {
+    const envSessionPath = getEnvSessionPath();
+    if (envSessionPath) {
       const now = (/* @__PURE__ */ new Date()).toISOString();
       profiles.push({
-        alias: "default",
-        label: "\u65E7\u7248\u4F1A\u8BDD",
-        sessionPath: legacy.sessionPath,
+        alias: "session",
+        label: "\u73AF\u5883\u53D8\u91CF\u4F1A\u8BDD",
+        sessionPath: envSessionPath,
         createdAt: now,
         updatedAt: now,
-        source: "legacy-session"
+        source: "explicit-session"
       });
     }
   }
@@ -779,8 +759,22 @@ async function resolveProfiles(selector = {}) {
       }
     ];
   }
+  const envSessionPath = getEnvSessionPath();
+  if (envSessionPath) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    return [
+      {
+        alias: "session",
+        label: "\u73AF\u5883\u53D8\u91CF\u4F1A\u8BDD",
+        sessionPath: envSessionPath,
+        createdAt: now,
+        updatedAt: now,
+        source: "explicit-session"
+      }
+    ];
+  }
   const registry = await readProfileRegistry();
-  const profiles = await listProfiles({ includeLegacy: true, skillDir: selector.skillDir });
+  const profiles = await listProfiles({ includeExplicitEnv: false });
   if (selector.allProfiles) {
     if (profiles.length === 0) {
       throw new Error(
@@ -869,12 +863,11 @@ function normalizeProfileSelector(input) {
   return {
     profile: typeof input.profile === "string" && input.profile.trim() ? validateProfileAlias(input.profile) : void 0,
     allProfiles: input.allProfiles === true || input.allProfiles === "true" || input.allProfiles === "1",
-    sessionPath: typeof input.sessionPath === "string" && input.sessionPath.trim() ? input.sessionPath : void 0,
-    skillDir: input.skillDir
+    sessionPath: typeof input.sessionPath === "string" && input.sessionPath.trim() ? input.sessionPath : void 0
   };
 }
 async function listProfiles2() {
-  const profiles = await listProfiles({ includeLegacy: true });
+  const profiles = await listProfiles({ includeExplicitEnv: true });
   return { profiles: profiles.map(toPublicProfile) };
 }
 async function listAccounts(selector = {}) {
@@ -1032,9 +1025,6 @@ function getArgValue(argName) {
 function hasFlag(argName) {
   return process.argv.includes(`--${argName}`);
 }
-function getSkillDir() {
-  return path2.dirname(path2.resolve(process.argv[1] || "."));
-}
 function printJson(data) {
   console.log(JSON.stringify(data, null, 2));
 }
@@ -1046,8 +1036,7 @@ function getSelectorArgs() {
   return normalizeProfileSelector({
     profile: getArgValue("profile") || void 0,
     allProfiles: hasFlag("all-profiles") || getArgValue("all-profiles") || void 0,
-    sessionPath: getArgValue("session") || void 0,
-    skillDir: getSkillDir()
+    sessionPath: getArgValue("session") || void 0
   });
 }
 function getAccountNumbers() {

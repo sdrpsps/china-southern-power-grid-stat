@@ -22548,27 +22548,10 @@ async function readProfileRegistry(registryPath = getDefaultRegistryPath()) {
     }))
   };
 }
-function findLegacySessionPath(skillDir) {
+function getEnvSessionPath() {
   const envSession = process.env[SESSION_FILE_ENV];
   if (envSession && fs.existsSync(path.resolve(envSession))) {
-    return { sessionPath: path.resolve(envSession), source: "env" };
-  }
-  const candidates = [];
-  if (skillDir) {
-    candidates.push({
-      sessionPath: path.resolve(skillDir, "session.json"),
-      source: "skill-local"
-    });
-  }
-  candidates.push(
-    { sessionPath: path.resolve(process.cwd(), "session.json"), source: "legacy-cwd" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "../session.json"), source: "legacy-module" },
-    { sessionPath: path.resolve(RUNTIME_DIR, "session.json"), source: "legacy-module" }
-  );
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate.sessionPath)) {
-      return candidate;
-    }
+    return path.resolve(envSession);
   }
   return null;
 }
@@ -22578,17 +22561,17 @@ async function listProfiles(options = {}) {
     ...profile,
     source: "registry"
   }));
-  if (profiles.length === 0 && options.includeLegacy !== false) {
-    const legacy = findLegacySessionPath(options.skillDir);
-    if (legacy) {
+  if (profiles.length === 0 && options.includeExplicitEnv !== false) {
+    const envSessionPath = getEnvSessionPath();
+    if (envSessionPath) {
       const now = (/* @__PURE__ */ new Date()).toISOString();
       profiles.push({
-        alias: "default",
-        label: "\u65E7\u7248\u4F1A\u8BDD",
-        sessionPath: legacy.sessionPath,
+        alias: "session",
+        label: "\u73AF\u5883\u53D8\u91CF\u4F1A\u8BDD",
+        sessionPath: envSessionPath,
         createdAt: now,
         updatedAt: now,
-        source: "legacy-session"
+        source: "explicit-session"
       });
     }
   }
@@ -22608,8 +22591,22 @@ async function resolveProfiles(selector = {}) {
       }
     ];
   }
+  const envSessionPath = getEnvSessionPath();
+  if (envSessionPath) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    return [
+      {
+        alias: "session",
+        label: "\u73AF\u5883\u53D8\u91CF\u4F1A\u8BDD",
+        sessionPath: envSessionPath,
+        createdAt: now,
+        updatedAt: now,
+        source: "explicit-session"
+      }
+    ];
+  }
   const registry2 = await readProfileRegistry();
-  const profiles = await listProfiles({ includeLegacy: true, skillDir: selector.skillDir });
+  const profiles = await listProfiles({ includeExplicitEnv: false });
   if (selector.allProfiles) {
     if (profiles.length === 0) {
       throw new Error(
@@ -22698,12 +22695,11 @@ function normalizeProfileSelector(input) {
   return {
     profile: typeof input.profile === "string" && input.profile.trim() ? validateProfileAlias(input.profile) : void 0,
     allProfiles: input.allProfiles === true || input.allProfiles === "true" || input.allProfiles === "1",
-    sessionPath: typeof input.sessionPath === "string" && input.sessionPath.trim() ? input.sessionPath : void 0,
-    skillDir: input.skillDir
+    sessionPath: typeof input.sessionPath === "string" && input.sessionPath.trim() ? input.sessionPath : void 0
   };
 }
 async function listProfiles2() {
-  const profiles = await listProfiles({ includeLegacy: true });
+  const profiles = await listProfiles({ includeExplicitEnv: true });
   return { profiles: profiles.map(toPublicProfile) };
 }
 async function listAccounts(selector = {}) {

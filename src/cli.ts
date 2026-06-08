@@ -1,4 +1,3 @@
-import * as path from "path";
 import {
   listAccounts,
   listProfiles,
@@ -24,10 +23,6 @@ function hasFlag(argName: string): boolean {
   return process.argv.includes(`--${argName}`);
 }
 
-function getSkillDir(): string {
-  return path.dirname(path.resolve(process.argv[1] || "."));
-}
-
 function printJson(data: unknown) {
   console.log(JSON.stringify(data, null, 2));
 }
@@ -42,7 +37,6 @@ function getSelectorArgs() {
     profile: getArgValue("profile") || undefined,
     allProfiles: hasFlag("all-profiles") || getArgValue("all-profiles") || undefined,
     sessionPath: getArgValue("session") || undefined,
-    skillDir: getSkillDir(),
   });
 }
 
