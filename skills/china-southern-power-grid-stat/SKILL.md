@@ -1,7 +1,7 @@
 ---
 name: china-southern-power-grid-stat
 description: 查询南方电网多用户配置下的电费余额、欠费状况及月度每日用电详情。
-version: 1.0.0
+version: 1.0.1
 requires:
   bins:
     - node
@@ -44,12 +44,16 @@ node ./scripts/cli.cjs --action=balance --profile=<别名> --account=<户号1> -
 node ./scripts/cli.cjs --action=balance --all-profiles --all-accounts
 ```
 
+`--account` 必须使用账户列表返回的 `accountNumber`。不要把 `meteringPointNumber` 当作缴费户号重试。
+
 ### 查询月度每日用电详情
 
 ```bash
 node ./scripts/cli.cjs --action=usage --profile=<别名> --account=<缴费户号> --year=<年份> --month=<月份>
 node ./scripts/cli.cjs --action=usage --all-profiles --all-accounts --year=<年份> --month=<月份>
 ```
+
+`--account` 必须使用账户列表返回的 `accountNumber`。不要把 `meteringPointNumber` 当作缴费户号重试。
 
 ### 验证登录状态
 
@@ -62,4 +66,7 @@ node ./scripts/cli.cjs --action=verify --all-profiles
 
 - 单用户配置、单户号查询通常返回单个 JSON 对象。
 - 多用户配置、多户号或部分失败时返回包含结果数组和 `errors` 数组的 JSON 对象。
+- 如果账户列表只有一个明确匹配的账户，可以直接使用该账户的 `accountNumber` 查询余额或用量；多个账户或匹配不明确时再请用户确认。
+- 回答月度每日用电详情时，把 `dailyDetails` 展示为 Markdown 表格，至少包含日期、用电量（度/kWh）和用电额/电费（元）。
+- 如果每日 `charge` 均为 0 或缺失，但 `monthTotalCost` 不为 0，说明上游未返回可用的每日电费明细，不要自行分摊估算。
 - 遇到用户配置或会话错误时，引导用户在项目本地运行登录流程生成或更新用户配置。

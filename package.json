@@ -1,6 +1,6 @@
 {
   "name": "china-southern-power-grid-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "南方电网账户查询服务，支持零依赖 MCP 服务端和零依赖 Skill 包。",
   "main": "mcp/server.cjs",
@@ -9,6 +9,7 @@
     "login:agent": "tsx src/login.ts --agent",
     "start": "tsx src/server.ts",
     "query": "tsx src/cli.ts",
+    "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "pnpm run typecheck && pnpm run build:mcp && pnpm run build:skill",
     "build:mcp": "node -e \"const fs=require('fs'); const path=require('path'); fs.mkdirSync('mcp',{recursive:true}); for (const name of fs.readdirSync('mcp')) { if (name !== '.csg') fs.rmSync(path.join('mcp',name),{recursive:true,force:true}); }\" && esbuild src/server.ts --bundle --platform=node --format=cjs --outfile=mcp/server.cjs",

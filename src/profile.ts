@@ -39,8 +39,8 @@ export function validateProfileAlias(alias: string): string {
 
 export function validateAccountNumber(accountNumber: string): string {
   const value = String(accountNumber || "").trim();
-  if (!/^\d{16}$/.test(value)) {
-    throw new Error("缴费户号必须是 16 位数字字符串。");
+  if (!/^\d{10,20}$/.test(value)) {
+    throw new Error("缴费户号必须是 10 到 20 位数字字符串。");
   }
   return value;
 }

@@ -25,11 +25,14 @@ const profileInputSchema = {
 
 const accountSelectionSchema = {
   ...profileInputSchema,
-  accountNumber: z.string().optional().describe("单个 16 位缴费户号"),
+  accountNumber: z
+    .string()
+    .optional()
+    .describe("单个缴费户号，使用账户列表返回的 accountNumber"),
   accountNumbers: z
     .array(z.string())
     .optional()
-    .describe("多个 16 位缴费户号"),
+    .describe("多个缴费户号，使用账户列表返回的 accountNumber"),
   allAccounts: z.boolean().optional().describe("查询已发现的所有电表账户"),
 };
 
@@ -116,7 +119,7 @@ function getAccountNumbers(args: {
 
 const server = new McpServer({
   name: "china-southern-power-grid-mcp",
-  version: "1.0.0",
+  version: "1.0.1",
 });
 
 server.registerTool(

@@ -153,7 +153,7 @@ async function getProfileAccounts(profile: CSGProfile): Promise<CSGElectricityAc
   return client.getAllElectricityAccounts();
 }
 
-function selectAccounts(
+export function selectAccounts(
   profile: CSGProfile,
   accounts: CSGElectricityAccount[],
   accountNumbers: string[] | undefined,

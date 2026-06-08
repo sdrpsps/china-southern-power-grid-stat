@@ -651,8 +651,8 @@ function validateProfileAlias(alias) {
 }
 function validateAccountNumber(accountNumber) {
   const value = String(accountNumber || "").trim();
-  if (!/^\d{16}$/.test(value)) {
-    throw new Error("\u7F34\u8D39\u6237\u53F7\u5FC5\u987B\u662F 16 \u4F4D\u6570\u5B57\u5B57\u7B26\u4E32\u3002");
+  if (!/^\d{10,20}$/.test(value)) {
+    throw new Error("\u7F34\u8D39\u6237\u53F7\u5FC5\u987B\u662F 10 \u5230 20 \u4F4D\u6570\u5B57\u5B57\u7B26\u4E32\u3002");
   }
   return value;
 }
