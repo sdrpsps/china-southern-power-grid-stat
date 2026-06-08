@@ -7,6 +7,8 @@
 
 项目支持多个本地用户配置。每个用户配置对应一个南方电网登录会话，一个用户配置下可以包含多个已绑定电表。
 
+![image](https://cdn.nodeimage.com/i/8OWxL84oOIE0xesjVrgXSYnceQQXXj16.webp)
+
 ## 功能
 
 - 多用户配置登录态管理：例如 `home`、`parents`、`shop`。
