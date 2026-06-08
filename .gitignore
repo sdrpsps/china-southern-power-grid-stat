@@ -1,4 +1,12 @@
 node_modules
+.pnpm-store/
 session.json
+.csg/
+mcp/.csg/
+mcp/session.json
+skills/*/.csg/
+skills/*/session.json
+skills/*/scripts/.csg/
+skills/*/scripts/session.json
 
 .DS_Store

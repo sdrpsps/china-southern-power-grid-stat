@@ -226,7 +226,7 @@ export class CSGClient {
 
     const response = await fetch(url, fetchOptions);
     if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
+      throw new Error(`HTTP 请求失败：${response.status}`);
     }
 
     const text = await response.text();
@@ -243,7 +243,7 @@ export class CSGClient {
   }
 
   /**
-   * 处理不成功的 API 响应
+   * 处理不成功的接口响应
    */
   private handleUnsuccessfulResponse(path: string, responseData: any) {
     const sta = responseData[JSON_KEY_STA];
@@ -251,7 +251,7 @@ export class CSGClient {
     throw new Error(`接口错误 [${path}] (sta=${sta}): ${msg}`);
   }
 
-  // === 原始 API 请求 ===
+  // === 原始接口请求 ===
 
   /**
    * 发送登录短信验证码
@@ -286,7 +286,7 @@ export class CSGClient {
     const payload = {
       [JSON_KEY_AREA_CODE]: AREACODE_FALLBACK,
       "channel": channel,
-      "lgoinId": finalLoginId, // 原 API 包含拼写错误
+      "lgoinId": finalLoginId, // 上游接口包含拼写错误
     };
     const { data } = await this.makeRequest(path, payload, {
       withAuth: false,
@@ -589,7 +589,7 @@ export class CSGClient {
    */
   static load(data: Record<string, any>): CSGClient {
     if (!data.auth_token) {
-      throw new Error("Session 数据中未发现 auth_token");
+      throw new Error("会话数据中未发现 auth_token");
     }
     const client = new CSGClient();
     client.authToken = data.auth_token;

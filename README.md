@@ -1,140 +1,242 @@
-# 南方电网 (CSG) 查询服务 (MCP & Skill)
+# 南方电网查询服务（MCP 与 Skill）
 
-本项目是一个使用 TypeScript 开发的独立南方电网 (China Southern Power Grid) 账户数据查询服务，**同时支持 MCP (Model Context Protocol) 服务端与零依赖自包含的 Skill 技能包形式**。它可以脱离 HomeAssistant 独立运行，并提供以下两种主流 AI 接入模式：
+本项目是一个使用 TypeScript 实现的南方电网账户数据查询服务，支持两种本地人工智能接入方式：
 
-1. **MCP 模式**：作为后台常驻进程，供 **Cursor**、**Claude Desktop** 等 AI 客户端直接作为 Tools 隐式调用。
-2. **Skill 模式**：提供完全纯粹、零第三方依赖且包含登录凭证的独立技能包（仅含 `SKILL.md` 和 `cli.cjs` 脚本），可直接拷贝到 **OpenClaw** 等本地 Agent 系统中直接零依赖直接调用。
+1. **MCP 模式**：作为标准输入输出 MCP 服务器，给 Cursor、Claude Desktop 等客户端提供结构化工具。
+2. **Skill 模式**：生成可复制的本地 Skill 包，通过零依赖 `cli.cjs` 脚本查询电表数据。
 
-![image](https://cdn.nodeimage.com/i/8OWxL84oOIE0xesjVrgXSYnceQQXXj16.webp)
+项目支持多个本地用户配置。每个用户配置对应一个南方电网登录会话，一个用户配置下可以包含多个已绑定电表。
 
----
+## 功能
 
-## 核心功能
+- 多用户配置登录态管理：例如 `home`、`parents`、`shop`。
+- 查询用户配置列表、绑定电表账户、电费余额、欠费、月度每日用电详情。
+- 支持单个用户配置、所有用户配置、单户号、多户号、所有户号查询。
+- MCP 工具返回结构化 `structuredContent`，同时保留文本 JSON 内容。
+- MCP 和 Skill 构建产物都可以零依赖复制部署，只需要目标环境有 Node.js。
+- Skill 命令行成功时输出 JSON 到标准输出，失败时输出 JSON 错误到标准错误。
+- 普通构建不会复制本地凭证；只有显式本地专用打包才会把 `.csg` 凭证打进 Skill 包。
 
-- **双登录渠道支持**：提供命令行交互登录向导，支持短信验证码登录、账号密码+短信登录以及扫码登录（微信、支付宝、南网 APP）。
-- **会话持久化与分发**：登录成功后，认证凭证存入 `session.json`，在 `pnpm run build` 时会自动且安全地将其分发至 Skill 包内部，实现发布即可运行。
-- **丰富的查询接口**：
-  - `get_electricity_accounts`：获取该用户绑定的所有用电账户（包含缴费户号、户名、地址）。
-  - `get_balance`：根据缴费户号查询实时余额（元）与欠费情况（元）。
-  - `get_usage`：查询指定账户在特定月份的每日电量电费、月度统计、阶梯计费（当前阶梯数及档内剩余可用额度）等明细。
-  - `verify_session`：检测当前缓存的会话状态是否仍然有效。
-
----
-
-## 安装与初始化步骤
-
-### 1. 安装项目依赖
-
-确保你的开发环境中已安装 Node.js (建议 v18+) 和 `pnpm` 包管理器。在根目录下执行：
+## 安装
 
 ```bash
 pnpm install
 ```
 
-### 2. 命令行交互登录 (生成凭证)
+## 登录与用户配置
 
-在根目录下运行以下命令，并根据提示选择你的登录方式（推荐选择**扫码登录**以获得最方便的体验）：
+交互式登录并创建或更新用户配置：
 
 ```bash
 pnpm run login
 ```
 
-登录成功后，会在根目录下自动生成 `session.json` 会话凭证文件。
+也可以直接指定用户配置：
 
-### 3. 一键构建与打包
+```bash
+pnpm run login --profile=home
+```
 
-运行以下构建脚本：
+助手引导模式会输出 JSON 状态事件，适合对话式登录流程：
+
+```bash
+pnpm run login:agent --profile=home --method=qr --qr-channel=wechat
+```
+
+登录成功后，凭证默认保存在本地 `.csg/` 目录下：
+
+```text
+.csg/
+├── profiles.json
+└── sessions/
+    └── home.session.json
+```
+
+`.csg/` 是本地敏感数据，不要提交、发布或分享。
+
+## 构建
+
+普通构建只生成代码产物，不复制凭证：
 
 ```bash
 pnpm run build
 ```
 
-执行后会进行两项工作：
+单独构建 MCP 或 Skill：
 
-1. 使用 `tsc` 编译出 MCP 服务所需的 `mcp` 运行产物。
-2. 使用 `esbuild` 自动把客户端核心逻辑打包为**零外部依赖**的独立单文件脚本，输出到 Skill 发布包 `skills/china-southern-power-grid-stat/scripts/cli.cjs` 中。如果本地存在 `session.json`，也会自动将其拷贝至该 Skill 文件夹内。
+```bash
+pnpm run build:mcp
+pnpm run build:skill
+```
 
----
+`build:mcp` 会生成单文件 `mcp/server.cjs`，已经包含 MCP SDK、结构校验和项目查询逻辑。复制部署 MCP 时不需要携带 `node_modules` 或 `package.json`。
 
-## 形式 A：集成到 MCP 客户端 (Cursor / Claude)
+如果确实需要本机私用的 Skill 包，可以显式打包本地凭证：
 
-由于 MCP 是基于进程间通信的，启动时会自动加载本地 `session.json`。
+```bash
+pnpm run pack:skill-local
+```
 
-### 1. Cursor 配置方式
+这个命令会复制 `.csg/` 到 Skill 脚本目录，仅适合本机使用，不要发布或分享生成后的 Skill 包。
 
-1. 打开 Cursor 设置：**Settings** -> **Features** -> **MCP**。
-2. 点击 **+ Add New MCP Server**：
-   - **Name**: `china-southern-power-grid`
-   - **Type**: `command`
-   - **Command**: `node [项目绝对路径]/mcp/server.js`
-     _(请务必将 [项目绝对路径] 替换为您本机项目的实际绝对路径。并且在执行此命令前，确保已成功运行 `pnpm run login` 生成了 `session.json`，且已执行 `pnpm build` 完成了编译)_
-3. 保存并确认指示灯为绿色。
+## 复制部署目录层级
 
-### 2. Claude Desktop 配置方式
+MCP 和 Skill 都是零依赖代码产物，但都需要能找到本地 `.csg/` 凭证目录。推荐把 `.csg/` 放在可执行文件同级：MCP 放在 `server.cjs` 同级，Skill 放在 `cli.cjs` 同级。`.csg/` 是敏感数据，只能放在你自己的本机或受信任环境中，不要提交、发布或分享。
 
-在你的 Claude Desktop 配置文件（通常位于 `~/Library/Application Support/Claude/claude_desktop_config.json`）的 `mcpServers` 字段下添加：
+### MCP 部署层级
+
+MCP 部署时，`.csg/` 放在 `server.cjs` 同级：
+
+```text
+csg-mcp-deploy/
+└── mcp/
+    ├── server.cjs
+    └── .csg/
+        ├── profiles.json
+        └── sessions/
+            └── home.session.json
+```
+
+MCP 客户端启动：
+
+```bash
+node /绝对路径/csg-mcp-deploy/mcp/server.cjs
+```
+
+这种层级下，服务会优先通过 `mcp/.csg/profiles.json` 找到凭证。
+
+### Skill 部署层级
+
+Skill 部署时，`.csg/` 放在 `cli.cjs` 同级，也就是 `scripts/` 目录内部：
+
+```text
+china-southern-power-grid-stat/
+├── SKILL.md
+└── scripts/
+    ├── cli.cjs
+    └── .csg/
+        ├── profiles.json
+        └── sessions/
+            └── home.session.json
+```
+
+可以手动复制：
+
+```bash
+cp -R skills/china-southern-power-grid-stat /你的 Skill 目录/
+cp -R .csg /你的 Skill 目录/china-southern-power-grid-stat/scripts/.csg
+```
+
+也可以先在项目内运行：
+
+```bash
+pnpm run pack:skill-local
+```
+
+然后复制整个 `skills/china-southern-power-grid-stat/` 目录。这个方式只适合本机私用。
+
+### MCP 和 Skill 共用同一份凭证
+
+如果不想复制两份 `.csg/`，可以把凭证放到独立安全目录，然后给 MCP 或 Skill 启动环境设置 `CSG_PROFILE_REGISTRY`：
+
+```bash
+CSG_PROFILE_REGISTRY=/安全目录/.csg/profiles.json node /部署目录/mcp/server.cjs
+```
+
+Skill 命令也可以使用同一个环境变量：
+
+```bash
+CSG_PROFILE_REGISTRY=/安全目录/.csg/profiles.json node ./scripts/cli.cjs --action=profiles
+```
+
+使用 `CSG_PROFILE_REGISTRY` 时，`profiles.json` 中的相对会话路径会相对于它所在的 `.csg/` 目录解析。
+
+## MCP 模式
+
+先构建：
+
+```bash
+pnpm run build:mcp
+```
+
+Cursor 或 Claude Desktop 配置示例：
 
 ```json
 {
   "mcpServers": {
     "china-southern-power-grid": {
       "command": "node",
-      "args": ["[项目绝对路径]/mcp/server.js"],
-      "env": {
-        "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-      }
+      "args": ["[部署目录]/mcp/server.cjs"]
     }
   }
 }
 ```
 
----
+MCP 工具：
 
-## 形式 B：集成到 OpenClaw (Skill 模式)
+- `list_profiles`：列出本地用户配置。
+- `get_electricity_accounts`：列出指定用户配置或所有用户配置的电表账户。
+- `get_balance`：查询一个或多个户号的余额和欠费。
+- `get_usage`：查询一个或多个户号的月度每日用电详情。
+- `verify_session`：验证指定用户配置或所有用户配置的登录状态。
 
-我们生成的 `skills/china-southern-power-grid-stat` 目录是一个完全纯粹、零依赖的技能包。
+工具参数支持：
 
-### 1. 技能包目录结构
+- `profile`：指定用户配置别名。
+- `allProfiles`：查询所有用户配置。
+- `sessionPath`：临时指定单个会话文件。
+- `accountNumber` / `accountNumbers`：指定一个或多个缴费户号。
+- `allAccounts`：查询选中用户配置下所有电表。
+
+## Skill 模式
+
+构建 Skill 脚本：
+
+```bash
+pnpm run build:skill
+```
+
+Skill 包位于：
 
 ```text
 skills/china-southern-power-grid-stat/
-├── SKILL.md            # 面向 AI 的技能描述文档，带标准 YAML 元数据
-├── session.json        # 构建时自动拷贝的登录会话凭证
+├── SKILL.md
 └── scripts/
-    └── cli.cjs         # esbuild 混淆打包后的单文件脚本
+    └── cli.cjs
 ```
 
-### 2. 集成到 OpenClaw
+常用命令：
 
-你只需将 `china-southern-power-grid-stat` 这个独立的子目录拷贝到 OpenClaw 的本地 Skill 路径下（例如 `~/.openclaw/workspace/skills/`）：
+```bash
+node ./scripts/cli.cjs --action=profiles
+node ./scripts/cli.cjs --action=accounts --profile=home
+node ./scripts/cli.cjs --action=accounts --all-profiles
+node ./scripts/cli.cjs --action=balance --profile=home --account=<缴费户号>
+node ./scripts/cli.cjs --action=balance --all-profiles --all-accounts
+node ./scripts/cli.cjs --action=usage --profile=home --account=<缴费户号> --year=2026 --month=6
+node ./scripts/cli.cjs --action=verify --all-profiles
+```
 
-一旦放入，OpenClaw 会自动解析 `SKILL.md`，Agent 就能在需要时直接通过 `node ./scripts/cli.cjs` 命令来为你查询数据。
+会话查找顺序：
 
-命令行详细调用参数参见 [SKILL.md](skills/china-southern-power-grid-stat/SKILL.md)。
+1. `--session=/path/to/session.json`
+2. 环境变量 `CSG_SESSION_FILE`
+3. Skill 本地 `.csg/` 用户配置注册表
+4. 兼容旧版的 `session.json`
 
----
+## 开发结构
 
-## 项目开发结构
+- `src/consts.ts`：南方电网接口常量。
+- `src/csg-client.ts`：南方电网接口客户端、加解密和高层接口封装。
+- `src/profile.ts`：本地用户配置注册表、会话路径解析和登录态加载。
+- `src/query-service.ts`：MCP 和 Skill 共享的用户配置感知查询服务。
+- `src/login.ts`：交互式和助手引导登录。
+- `src/cli.ts`：Skill 命令行入口。
+- `src/server.ts`：MCP 标准输入输出服务。
+- `skills/`：生成的 Skill 包。
 
-- `src/consts.ts`：南方电网 API 接口路由、AES/RSA 密钥等常量配置。
-- `src/csg-client.ts`：包含零填充的 AES-128-CBC 加解密、RSA PKCS1 密码加密，及对电网 API 的 fetch 封装。
-- `src/login.ts`：支持多登录渠道的控制台交互式登录生成器。
-- `src/cli.ts`：命令行交互查询入口，供打包为 Skill 独立单文件时使用。
-- `src/server.ts`：实现 stdio 传输通道的标准 MCP 服务器。
-- `skills/`：发布出的 OpenClaw 标准技能包文件夹。
+## 致谢
 
----
-
-## 鸣谢 (Credits)
-
-本项目的核心电网 API 加解密算法与业务请求封装思路，参考并修改自原 HomeAssistant 自定义集成项目：
+核心电网接口加解密算法与业务请求封装思路参考并修改自：
 
 - [lmh555168/china_southern_power_grid_stat](https://github.com/lmh555168/china_southern_power_grid_stat)
-
-特此向原作者的开源贡献表示诚挚的感谢！
-
----
-
-## 参与贡献 (Contributing)
-
-本项目完全开源，如果您在使用中遇到了新的接口需求、南网 API 协议升级，或发现了任何 Bug，非常欢迎提交 Issue 或**直接提交 Pull Request (PR)** 来共同完善本项目！您的贡献将让更多使用本地 AI 助手的开发者受益。

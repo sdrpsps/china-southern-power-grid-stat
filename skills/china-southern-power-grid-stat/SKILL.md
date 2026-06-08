@@ -1,6 +1,6 @@
 ---
 name: china-southern-power-grid-stat
-description: 查询南方电网电费余额、欠费状况及月度每日用电详情的技能包。
+description: 查询南方电网多用户配置下的电费余额、欠费状况及月度每日用电详情。
 version: 1.0.0
 requires:
   bins:
@@ -9,72 +9,57 @@ requires:
 
 # 南方电网电费与用电数据查询
 
-本技能允许你通过调用底层的 `cli.cjs` 脚本，查询当前用户名下绑定电表的余额、欠费和特定月份的用电量细节。
+使用 `node ./scripts/cli.cjs` 查询本地已登录用户配置下的电表账户、余额和月度用电详情。所有命令成功时向标准输出输出 JSON；失败时向标准错误输出 `{"error":"..."}` 并返回非零退出码。
 
-## 使用条件
+## 用户配置与凭证
 
-1. 用户必须已经在项目根目录下成功运行过 `pnpm run login` 生成了 `session.json`。
-2. 本项目已经成功运行了 `pnpm run build` 完成编译。
+- 优先使用 `--profile=<别名>` 指定本地用户配置。
+- 使用 `--all-profiles` 可跨所有已配置用户配置查询。
+- 如未指定用户配置，脚本使用默认用户配置；没有默认用户配置时先运行 `profiles` 查看可用项。
+- 可用 `--session=/absolute/path/session.json` 临时指定单个会话文件。
+- 不要在普通回答中展示完整会话、完整户号、完整地址或用户名，除非用户明确要求。
 
----
+## 命令
 
-## 技能接口与调用规则
+### 列出用户配置
 
-当你需要执行查询操作时，在终端运行以下相对路径脚本：
+```bash
+node ./scripts/cli.cjs --action=profiles
+```
 
-### 1. 查询绑定的所有用电账户
+### 列出电表账户
 
-- **命令**: `node ./scripts/cli.cjs --action=accounts`
-- **返回**: 包含所有电表信息的 JSON 数组，例如：
-  ```json
-  [
-    {
-      "account_number": "1234567890123456",
-      "area_code": "030000",
-      "ele_customer_id": "xxx",
-      "metering_point_id": "xxx",
-      "metering_point_number": "xxx",
-      "address": "广东省广州市某某区某某路xx号",
-      "user_name": "*某某"
-    }
-  ]
-  ```
+```bash
+node ./scripts/cli.cjs --action=accounts --profile=<别名>
+node ./scripts/cli.cjs --action=accounts --all-profiles
+```
 
-### 2. 查询指定户号的电费余额及欠费
+查询余额或用量前，如果用户没有给出户号，先列出账户并让用户确认要查哪个用户配置/户号。
 
-- **命令**: `node ./scripts/cli.cjs --action=balance --account=<缴费户号>`
-- **参数说明**: `<缴费户号>` 为 16 位数字字符串。
-- **返回**: 包含余额与欠费的 JSON 对象，例如：
-  ```json
-  {
-    "accountNumber": "1234567890123456",
-    "address": "广东省广州市某某区某某路xx号",
-    "userName": "*某某",
-    "balance": 150.25,
-    "arrears": 0.0
-  }
-  ```
+### 查询余额与欠费
 
-### 3. 查询指定户号在某月每日的用电细则
+```bash
+node ./scripts/cli.cjs --action=balance --profile=<别名> --account=<缴费户号>
+node ./scripts/cli.cjs --action=balance --profile=<别名> --account=<户号1> --account=<户号2>
+node ./scripts/cli.cjs --action=balance --all-profiles --all-accounts
+```
 
-- **命令**: `node ./scripts/cli.cjs --action=usage --account=<缴费户号> --year=<年份> --month=<月份>`
-- **参数说明**: `<年份>` 为 4 位数字（例如 2026），`<月份>` 为 1~12 的整数。
-- **返回**: 包含月度总计、当前阶梯电价状况、每日用电明细的 JSON 对象，例如：
-  ```json
-  {
-    "accountNumber": "1234567890123456",
-    "address": "广东省广州市某某区某某路xx号",
-    "userName": "*某某",
-    "year": 2026,
-    "month": 6,
-    "monthTotalCost": 128.5,
-    "monthTotalKwh": 210,
-    "ladder": {
-      "ladder": 1,
-      "startDate": "2026-06-01 00:00:00.0",
-      "remainingKwh": 190.0,
-      "tariff": 0.64
-    },
-    "dailyDetails": [{ "date": "2026-06-01", "charge": 4.1, "kwh": 6.4 }]
-  }
-  ```
+### 查询月度每日用电详情
+
+```bash
+node ./scripts/cli.cjs --action=usage --profile=<别名> --account=<缴费户号> --year=<年份> --month=<月份>
+node ./scripts/cli.cjs --action=usage --all-profiles --all-accounts --year=<年份> --month=<月份>
+```
+
+### 验证登录状态
+
+```bash
+node ./scripts/cli.cjs --action=verify --profile=<别名>
+node ./scripts/cli.cjs --action=verify --all-profiles
+```
+
+## 输出处理
+
+- 单用户配置、单户号查询通常返回单个 JSON 对象。
+- 多用户配置、多户号或部分失败时返回包含结果数组和 `errors` 数组的 JSON 对象。
+- 遇到用户配置或会话错误时，引导用户在项目本地运行登录流程生成或更新用户配置。

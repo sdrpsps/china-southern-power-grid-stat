@@ -11,9 +11,12 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.1
         version: 1.29.0(zod@4.4.3)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
-        specifier: ^20.11.24
+        specifier: ^20.19.42
         version: 20.19.42
       esbuild:
         specifier: ^0.28.0

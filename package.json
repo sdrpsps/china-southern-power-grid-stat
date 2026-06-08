@@ -2,19 +2,25 @@
   "name": "china-southern-power-grid-mcp",
   "version": "1.0.0",
   "type": "module",
-  "description": "China Southern Power Grid (CSG) account query service, supporting both Model Context Protocol (MCP) server and zero-dependency Skill package.",
-  "main": "mcp/server.js",
+  "description": "南方电网账户查询服务，支持零依赖 MCP 服务端和零依赖 Skill 包。",
+  "main": "mcp/server.cjs",
   "scripts": {
     "login": "tsx src/login.ts",
+    "login:agent": "tsx src/login.ts --agent",
     "start": "tsx src/server.ts",
     "query": "tsx src/cli.ts",
-    "build": "tsc && esbuild src/cli.ts --bundle --platform=node --outfile=skills/china-southern-power-grid-stat/scripts/cli.cjs && node -e \"const fs = require('fs'); if (fs.existsSync('session.json')) { fs.copyFileSync('session.json', 'skills/china-southern-power-grid-stat/session.json'); console.log('Successfully copied session.json to Skill folder.'); }\""
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm run typecheck && pnpm run build:mcp && pnpm run build:skill",
+    "build:mcp": "node -e \"const fs=require('fs'); const path=require('path'); fs.mkdirSync('mcp',{recursive:true}); for (const name of fs.readdirSync('mcp')) { if (name !== '.csg') fs.rmSync(path.join('mcp',name),{recursive:true,force:true}); }\" && esbuild src/server.ts --bundle --platform=node --format=cjs --outfile=mcp/server.cjs",
+    "build:skill": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=skills/china-southern-power-grid-stat/scripts/cli.cjs",
+    "pack:skill-local": "node -e \"const fs=require('fs'); const src='.csg'; const dest='skills/china-southern-power-grid-stat/scripts/.csg'; if (!fs.existsSync(src)) { console.error('未找到 .csg 用户配置目录。请先运行 pnpm run login。'); process.exit(1); } fs.rmSync(dest,{recursive:true,force:true}); fs.cpSync(src,dest,{recursive:true}); console.log('本地专用 Skill 脚本目录已包含 .csg 凭证。请勿发布或分享。');\""
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.1"
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^20.11.24",
+    "@types/node": "^20.19.42",
     "esbuild": "^0.28.0",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"

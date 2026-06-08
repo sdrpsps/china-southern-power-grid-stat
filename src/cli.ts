@@ -1,121 +1,122 @@
-import * as fs from "fs";
 import * as path from "path";
-import { CSGClient } from "./csg-client.js";
+import {
+  listAccounts,
+  listProfiles,
+  normalizeProfileSelector,
+  queryBalances,
+  queryUsage,
+  verifySessions,
+} from "./query-service.js";
 
-const SESSION_FILE_PATH = path.resolve(process.cwd(), "session.json");
-
-function getArgValue(argName: string): string | null {
-  const arg = process.argv.find((a) => a.startsWith(`--${argName}=`));
-  return arg ? arg.split("=")[1] : null;
+function getArgValues(argName: string): string[] {
+  const prefix = `--${argName}=`;
+  return process.argv
+    .filter((arg) => arg.startsWith(prefix))
+    .map((arg) => arg.slice(prefix.length))
+    .filter(Boolean);
 }
 
-async function getInitializedClient(): Promise<CSGClient> {
-  if (!fs.existsSync(SESSION_FILE_PATH)) {
-    throw new Error(
-      "未找到 session.json，请先运行 `pnpm run login` 完成登录。",
-    );
-  }
-  const sessionContent = await fs.promises.readFile(SESSION_FILE_PATH, "utf-8");
-  const sessionData = JSON.parse(sessionContent);
-  const client = CSGClient.load(sessionData);
-  await client.initialize();
-  return client;
+function getArgValue(argName: string): string | null {
+  return getArgValues(argName)[0] || null;
+}
+
+function hasFlag(argName: string): boolean {
+  return process.argv.includes(`--${argName}`);
+}
+
+function getSkillDir(): string {
+  return path.dirname(path.resolve(process.argv[1] || "."));
+}
+
+function printJson(data: unknown) {
+  console.log(JSON.stringify(data, null, 2));
+}
+
+function printJsonError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(JSON.stringify({ error: message }));
+}
+
+function getSelectorArgs() {
+  return normalizeProfileSelector({
+    profile: getArgValue("profile") || undefined,
+    allProfiles: hasFlag("all-profiles") || getArgValue("all-profiles") || undefined,
+    sessionPath: getArgValue("session") || undefined,
+    skillDir: getSkillDir(),
+  });
+}
+
+function getAccountNumbers(): string[] {
+  return [...getArgValues("account"), ...getArgValues("account-number")];
 }
 
 async function main() {
   const action = getArgValue("action");
 
   if (!action) {
-    console.error("错误: 缺少 --action 参数。例如: --action=accounts");
+    printJsonError("缺少 --action 参数。例如：--action=accounts");
     process.exit(1);
   }
 
   try {
-    const client = await getInitializedClient();
+    if (action === "profiles") {
+      printJson(await listProfiles());
+      process.exit(0);
+    }
 
     if (action === "accounts") {
-      const accounts = await client.getAllElectricityAccounts();
-      const formatted = accounts.map((acc) => acc.dump());
-      console.log(JSON.stringify(formatted, null, 2));
+      const result = await listAccounts(getSelectorArgs());
+      printJson(result.errors.length ? result : result.accounts);
       process.exit(0);
+    }
+
+    if (action === "verify" || action === "verify_session") {
+      const result = await verifySessions(getSelectorArgs());
+      printJson(result);
+      process.exit(result.profiles.every((profile) => profile.valid) ? 0 : 1);
     }
 
     if (action === "balance") {
-      const accountNo = getArgValue("account");
-      if (!accountNo) {
-        console.error("错误: 缺少 --account 参数");
-        process.exit(1);
+      const result = await queryBalances({
+        selector: getSelectorArgs(),
+        accountNumbers: getAccountNumbers(),
+        allAccounts: hasFlag("all-accounts"),
+      });
+      if (result.errors.length || result.balances.length !== 1) {
+        printJson(result);
+      } else {
+        printJson(result.balances[0]);
       }
-      const accounts = await client.getAllElectricityAccounts();
-      const target = accounts.find((acc) => acc.accountNumber === accountNo);
-      if (!target) {
-        throw new Error(`未找到缴费户号为 ${accountNo} 的账户`);
-      }
-      const balanceData = await client.getBalanceAndArrears(target);
-      console.log(
-        JSON.stringify(
-          {
-            accountNumber: target.accountNumber,
-            address: target.address,
-            userName: target.userName,
-            balance: balanceData.balance,
-            arrears: balanceData.arrears,
-          },
-          null,
-          2,
-        ),
-      );
-      process.exit(0);
+      process.exit(result.errors.length && result.balances.length === 0 ? 1 : 0);
     }
 
     if (action === "usage") {
-      const accountNo = getArgValue("account");
       const yearStr = getArgValue("year");
       const monthStr = getArgValue("month");
 
-      if (!accountNo || !yearStr || !monthStr) {
-        console.error("错误: 缺少 --account、--year 或 --month 参数");
-        process.exit(1);
+      if (!yearStr || !monthStr) {
+        throw new Error("缺少 --year 或 --month 参数。");
       }
 
-      const year = parseInt(yearStr, 10);
-      const month = parseInt(monthStr, 10);
+      const result = await queryUsage({
+        selector: getSelectorArgs(),
+        accountNumbers: getAccountNumbers(),
+        allAccounts: hasFlag("all-accounts"),
+        year: Number.parseInt(yearStr, 10),
+        month: Number.parseInt(monthStr, 10),
+      });
 
-      const accounts = await client.getAllElectricityAccounts();
-      const target = accounts.find((acc) => acc.accountNumber === accountNo);
-      if (!target) {
-        throw new Error(`未找到缴费户号为 ${accountNo} 的账户`);
+      if (result.errors.length || result.usages.length !== 1) {
+        printJson(result);
+      } else {
+        printJson(result.usages[0]);
       }
-
-      const usageData = await client.getMonthDailyCostDetail(
-        target,
-        year,
-        month,
-      );
-      console.log(
-        JSON.stringify(
-          {
-            accountNumber: target.accountNumber,
-            address: target.address,
-            userName: target.userName,
-            year,
-            month,
-            monthTotalCost: usageData.monthTotalCost,
-            monthTotalKwh: usageData.monthTotalKwh,
-            ladder: usageData.ladder,
-            dailyDetails: usageData.byDay,
-          },
-          null,
-          2,
-        ),
-      );
-      process.exit(0);
+      process.exit(result.errors.length && result.usages.length === 0 ? 1 : 0);
     }
 
-    console.error(`错误: 未知的 action: ${action}`);
-    process.exit(1);
-  } catch (error: any) {
-    console.error(JSON.stringify({ error: error?.message || error }));
+    throw new Error(`未知 action：${action}`);
+  } catch (error) {
+    printJsonError(error);
     process.exit(1);
   }
 }

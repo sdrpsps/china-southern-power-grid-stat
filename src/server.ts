@@ -1,292 +1,268 @@
-// @ts-ignore
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import * as z from "zod/v4";
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-import { CSGClient } from "./csg-client.js";
+  listAccounts,
+  listProfiles,
+  normalizeProfileSelector,
+  queryBalances,
+  queryUsage,
+  verifySessions,
+} from "./query-service.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const readOnlyAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+};
 
-// session.json 路径定位，依次尝试项目根目录、dist目录和当前工作目录
-const SESSION_FILE_PATH = (() => {
-  const paths = [
-    path.resolve(__dirname, "../session.json"),
-    path.resolve(__dirname, "session.json"),
-    path.resolve(process.cwd(), "session.json"),
-  ];
-  for (const p of paths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-  return paths[0]; // 默认返回第一个
-})();
+const profileInputSchema = {
+  profile: z.string().optional().describe("要使用的用户配置别名"),
+  allProfiles: z.boolean().optional().describe("查询所有已配置用户配置"),
+  sessionPath: z.string().optional().describe("显式指定的会话文件路径"),
+};
 
-/**
- * 载入并初始化南方电网客户端
- */
-async function getInitializedClient(): Promise<CSGClient> {
-  if (!fs.existsSync(SESSION_FILE_PATH)) {
-    throw new Error(
-      "未找到 session.json。请先在终端中运行 `pnpm run login` 完成南方电网扫码/验证码登录。",
-    );
-  }
+const accountSelectionSchema = {
+  ...profileInputSchema,
+  accountNumber: z.string().optional().describe("单个 16 位缴费户号"),
+  accountNumbers: z
+    .array(z.string())
+    .optional()
+    .describe("多个 16 位缴费户号"),
+  allAccounts: z.boolean().optional().describe("查询已发现的所有电表账户"),
+};
 
-  const sessionContent = await fs.promises.readFile(SESSION_FILE_PATH, "utf-8");
-  let sessionData: any;
-  try {
-    sessionData = JSON.parse(sessionContent);
-  } catch (e) {
-    throw new Error(
-      "session.json 格式损坏，请运行 `pnpm run login` 重新登录。",
-    );
-  }
+const errorSchema = z.object({
+  profile: z.string(),
+  accountNumber: z.string().optional(),
+  error: z.string(),
+});
 
-  const client = CSGClient.load(sessionData);
-  try {
-    await client.initialize();
-  } catch (error: any) {
-    throw new Error(
-      `初始化电网客户端失败 (可能是会话过期)，请运行 \`pnpm run login\` 重新登录。错误详情: ${error?.message}`,
-    );
-  }
+const accountSchema = z.object({
+  profile: z.string(),
+  accountNumber: z.string(),
+  areaCode: z.string(),
+  eleCustomerId: z.string(),
+  meteringPointId: z.string(),
+  meteringPointNumber: z.string(),
+  address: z.string(),
+  userName: z.string(),
+});
 
-  return client;
+const balanceSchema = z.object({
+  profile: z.string(),
+  accountNumber: z.string(),
+  address: z.string(),
+  userName: z.string(),
+  balance: z.number(),
+  arrears: z.number(),
+});
+
+const usageSchema = z.object({
+  profile: z.string(),
+  accountNumber: z.string(),
+  address: z.string(),
+  userName: z.string(),
+  year: z.number(),
+  month: z.number(),
+  monthTotalCost: z.number().nullable(),
+  monthTotalKwh: z.number().nullable(),
+  ladder: z.object({
+    ladder: z.number().nullable(),
+    startDate: z.string().nullable(),
+    remainingKwh: z.number().nullable(),
+    tariff: z.number().nullable(),
+  }),
+  dailyDetails: z.array(
+    z.object({
+      date: z.string(),
+      charge: z.number(),
+      kwh: z.number(),
+    }),
+  ),
+});
+
+function textContent(data: unknown) {
+  return [{ type: "text" as const, text: JSON.stringify(data, null, 2) }];
 }
 
-// 初始化 MCP 服务器
-// @ts-ignore
-const server = new Server(
+function successResult(structuredContent: Record<string, unknown>) {
+  return {
+    content: textContent(structuredContent),
+    structuredContent,
+  };
+}
+
+function errorResult(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const structuredContent = { error: message };
+  return {
+    content: textContent(structuredContent),
+    structuredContent,
+    isError: true,
+  };
+}
+
+function getAccountNumbers(args: {
+  accountNumber?: string;
+  accountNumbers?: string[];
+}): string[] {
+  return [
+    ...(args.accountNumber ? [args.accountNumber] : []),
+    ...(args.accountNumbers || []),
+  ];
+}
+
+const server = new McpServer({
+  name: "china-southern-power-grid-mcp",
+  version: "1.0.0",
+});
+
+server.registerTool(
+  "list_profiles",
   {
-    name: "china-southern-power-grid-mcp",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
+    description: "列出本地已配置的南方电网用户配置",
+    inputSchema: {},
+    outputSchema: {
+      profiles: z.array(
+        z.object({
+          alias: z.string(),
+          label: z.string().optional(),
+          sessionPath: z.string(),
+          createdAt: z.string(),
+          updatedAt: z.string(),
+          source: z.string().optional(),
+        }),
+      ),
     },
+    annotations: readOnlyAnnotations,
+  },
+  async () => {
+    try {
+      return successResult(await listProfiles());
+    } catch (error) {
+      return errorResult(error);
+    }
   },
 );
 
-// 注册支持的 Tool 列表
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "get_electricity_accounts",
-        description: "获取当前登录账号下绑定的所有用电账户（电表）列表",
-        inputSchema: {
-          type: "object",
-          properties: {},
-        },
-      },
-      {
-        name: "get_balance",
-        description: "查询指定缴费户号的电费余额及欠费信息",
-        inputSchema: {
-          type: "object",
-          properties: {
-            accountNumber: {
-              type: "string",
-              description:
-                "16 位用电缴费户号（可在 get_electricity_accounts 中查询到）",
-            },
-          },
-          required: ["accountNumber"],
-        },
-      },
-      {
-        name: "get_usage",
-        description:
-          "查询指定缴费户号在特定月份的每日电量、电费明细与当前阶梯计费信息",
-        inputSchema: {
-          type: "object",
-          properties: {
-            accountNumber: {
-              type: "string",
-              description: "16 位用电缴费户号",
-            },
-            year: {
-              type: "number",
-              description: "查询年份，例如 2026",
-            },
-            month: {
-              type: "number",
-              description: "查询月份 (1-12)，例如 6",
-            },
-          },
-          required: ["accountNumber", "year", "month"],
-        },
-      },
-      {
-        name: "verify_session",
-        description: "验证当前保存的登录状态 (session.json) 是否仍然有效",
-        inputSchema: {
-          type: "object",
-          properties: {},
-        },
-      },
-    ],
-  };
-});
-
-// 处理具体 Tool 调用请求
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
-  try {
-    // 处理 verify_session 的情况（可以先不进行初始化）
-    if (name === "verify_session") {
-      if (!fs.existsSync(SESSION_FILE_PATH)) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "未找到 session.json。登录状态失效，请运行 `pnpm run login` 登录。",
-            },
-          ],
-          isError: true,
-        };
-      }
-      const sessionContent = await fs.promises.readFile(
-        SESSION_FILE_PATH,
-        "utf-8",
-      );
-      const client = CSGClient.load(JSON.parse(sessionContent));
-      await client.initialize();
-      const isValid = await client.verifyLogin();
-      return {
-        content: [
-          {
-            type: "text",
-            text: isValid
-              ? "登录状态有效，可正常使用查询功能。"
-              : "登录已失效，请运行 `pnpm run login` 重新登录。",
-          },
-        ],
-        isError: !isValid,
-      };
+server.registerTool(
+  "get_electricity_accounts",
+  {
+    description:
+      "列出默认用户配置、指定用户配置或全部用户配置下的电表账户",
+    inputSchema: profileInputSchema,
+    outputSchema: {
+      accounts: z.array(accountSchema),
+      errors: z.array(errorSchema),
+    },
+    annotations: readOnlyAnnotations,
+  },
+  async (args) => {
+    try {
+      const structuredContent = await listAccounts(normalizeProfileSelector(args));
+      return successResult(structuredContent);
+    } catch (error) {
+      return errorResult(error);
     }
+  },
+);
 
-    // 其它接口需要获取初始化好的 Client
-    const client = await getInitializedClient();
-
-    if (name === "get_electricity_accounts") {
-      const accounts = await client.getAllElectricityAccounts();
-      const formattedAccounts = accounts.map((acc) => acc.dump());
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(formattedAccounts, null, 2),
-          },
-        ],
-      };
+server.registerTool(
+  "get_balance",
+  {
+    description:
+      "查询所选用户配置下一个电表、多个电表或全部电表的余额与欠费",
+    inputSchema: accountSelectionSchema,
+    outputSchema: {
+      balances: z.array(balanceSchema),
+      errors: z.array(errorSchema),
+    },
+    annotations: readOnlyAnnotations,
+  },
+  async (args) => {
+    try {
+      const structuredContent = await queryBalances({
+        selector: normalizeProfileSelector(args),
+        accountNumbers: getAccountNumbers(args),
+        allAccounts: args.allAccounts === true,
+      });
+      return successResult(structuredContent);
+    } catch (error) {
+      return errorResult(error);
     }
+  },
+);
 
-    if (name === "get_balance") {
-      const { accountNumber } = args as { accountNumber: string };
-      const accounts = await client.getAllElectricityAccounts();
-      const targetAccount = accounts.find(
-        (acc) => acc.accountNumber === accountNumber,
-      );
-      if (!targetAccount) {
-        throw new Error(`未找到缴费户号为 ${accountNumber} 的电表账户`);
-      }
-
-      const balanceData = await client.getBalanceAndArrears(targetAccount);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                accountNumber: targetAccount.accountNumber,
-                address: targetAccount.address,
-                userName: targetAccount.userName,
-                balance: balanceData.balance,
-                arrears: balanceData.arrears,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
-      };
+server.registerTool(
+  "get_usage",
+  {
+    description:
+      "查询所选用户配置下一个电表、多个电表或全部电表的月度用电详情",
+    inputSchema: {
+      ...accountSelectionSchema,
+      year: z.number().int().describe("查询年份，例如 2026"),
+      month: z.number().int().describe("查询月份，取值 1 到 12"),
+    },
+    outputSchema: {
+      usages: z.array(usageSchema),
+      errors: z.array(errorSchema),
+    },
+    annotations: readOnlyAnnotations,
+  },
+  async (args) => {
+    try {
+      const structuredContent = await queryUsage({
+        selector: normalizeProfileSelector(args),
+        accountNumbers: getAccountNumbers(args),
+        allAccounts: args.allAccounts === true,
+        year: args.year,
+        month: args.month,
+      });
+      return successResult(structuredContent);
+    } catch (error) {
+      return errorResult(error);
     }
+  },
+);
 
-    if (name === "get_usage") {
-      const { accountNumber, year, month } = args as {
-        accountNumber: string;
-        year: number;
-        month: number;
-      };
-
-      const accounts = await client.getAllElectricityAccounts();
-      const targetAccount = accounts.find(
-        (acc) => acc.accountNumber === accountNumber,
-      );
-      if (!targetAccount) {
-        throw new Error(`未找到缴费户号为 ${accountNumber} 的电表账户`);
-      }
-
-      const usageData = await client.getMonthDailyCostDetail(
-        targetAccount,
-        year,
-        month,
-      );
+server.registerTool(
+  "verify_session",
+  {
+    description: "验证默认用户配置、指定用户配置或全部用户配置的会话状态",
+    inputSchema: profileInputSchema,
+    outputSchema: {
+      profiles: z.array(
+        z.object({
+          profile: z.string(),
+          valid: z.boolean(),
+          reason: z.string().optional(),
+        }),
+      ),
+    },
+    annotations: readOnlyAnnotations,
+  },
+  async (args) => {
+    try {
+      const structuredContent = await verifySessions(normalizeProfileSelector(args));
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                accountNumber: targetAccount.accountNumber,
-                address: targetAccount.address,
-                userName: targetAccount.userName,
-                year,
-                month,
-                monthTotalCost: usageData.monthTotalCost,
-                monthTotalKwh: usageData.monthTotalKwh,
-                ladder: usageData.ladder,
-                dailyDetails: usageData.byDay,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        ...successResult(structuredContent),
+        isError: structuredContent.profiles.some((profile) => !profile.valid),
       };
+    } catch (error) {
+      return errorResult(error);
     }
+  },
+);
 
-    throw new Error(`未知的工具请求: ${name}`);
-  } catch (error: any) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: `[Error] ${error?.message || error}`,
-        },
-      ],
-      isError: true,
-    };
-  }
-});
-
-// 启动 Stdio 传输通道的 MCP 服务器
 async function startServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("China Southern Power Grid MCP Server running on stdio");
+  console.error("南方电网 MCP 服务已通过标准输入输出启动");
 }
 
 startServer().catch((error) => {
-  console.error("Fatal error running server:", error);
+  console.error("MCP 服务运行时发生致命错误：", error);
   process.exit(1);
 });

@@ -1,6 +1,6 @@
 /**
- * 南方电网 API 常量
- * 翻译自原 python 版本的 const.py
+ * 南方电网接口常量
+ * 翻译自原 Python 版本的 const.py
  */
 
 export const BASE_PATH_WEB = "https://95598.csg.cn/ucs/ma/wt/";
@@ -10,7 +10,7 @@ export const PARAM_KEY = "cOdHFNHUNkZrjNaN";
 export const PARAM_IV = "oMChoRLZnTivcQyR";
 
 export const LOGON_CHANNEL_ONLINE_HALL = "3"; // 网页端
-export const LOGON_CHANNEL_HANDHELD_HALL = "4"; // APP/移动端
+export const LOGON_CHANNEL_HANDHELD_HALL = "4"; // 移动应用/移动端
 
 export const RESP_STA_SUCCESS = "00";
 export const RESP_STA_EMPTY_PARAMETER = "01";
