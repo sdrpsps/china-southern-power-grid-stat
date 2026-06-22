@@ -98,6 +98,16 @@ export async function setDefaultProfile(alias: string) {
   })
 }
 
+export async function deleteProfile(alias: string) {
+  const profile = await getProfileByAlias(alias)
+  if (!profile) {
+    throw new Error(`未知用户配置 '${alias}'。`)
+  }
+  // 关联的 sessions、electricity_accounts、balance_snapshots、usage_months 均设置了 onDelete: "cascade"，
+  // 删除 profile 后会自动级联删除。
+  getDb().delete(profiles).where(eq(profiles.id, profile.id)).run()
+}
+
 export async function saveSession(input: {
   profileId: number
   authToken: string

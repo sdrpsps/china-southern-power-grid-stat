@@ -1,4 +1,5 @@
-import { ShieldCheckIcon } from "lucide-react"
+import { ShieldCheckIcon, Trash2Icon, AlertCircleIcon } from "lucide-react"
+import { useState } from "react"
 
 import {
   Card,
@@ -43,6 +44,8 @@ export function ProfileCard({
   setScope,
   verifyLoading,
   onVerifySessions,
+  onDeleteProfile,
+  deleteLoading,
 }: {
   hasProfiles: boolean
   profileItems: SelectOption[]
@@ -52,7 +55,23 @@ export function ProfileCard({
   setScope: (value: string) => void
   verifyLoading: boolean
   onVerifySessions: () => void
+  onDeleteProfile: (alias: string) => void
+  deleteLoading: boolean
 }) {
+  // 等待确认的配置别名，非空时显示确认提示
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+
+  function handleDeleteClick() {
+    if (!selectedProfile || scope === "all") return
+    setPendingDelete(selectedProfile)
+  }
+
+  function handleConfirmDelete() {
+    if (!pendingDelete) return
+    onDeleteProfile(pendingDelete)
+    setPendingDelete(null)
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -80,28 +99,77 @@ export function ProfileCard({
             </Field>
             <Field data-disabled={scope === "all" || undefined}>
               <FieldLabel htmlFor="profile-select">当前配置</FieldLabel>
-              <Select
-                items={profileItems}
-                value={profileItems.find((item) => item.value === selectedProfile) || profileItems[0]}
-                onValueChange={(value) => setSelectedProfile(value?.value || "")}
-                disabled={scope === "all"}
-                itemToStringValue={(item) => item.label}
-              >
-                <SelectTrigger id="profile-select" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {profileItems.map((item) => (
-                      <SelectItem key={item.value} value={item}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  items={profileItems}
+                  value={profileItems.find((item) => item.value === selectedProfile) || profileItems[0]}
+                  onValueChange={(value) => {
+                    setPendingDelete(null)
+                    setSelectedProfile(value?.value || "")
+                  }}
+                  disabled={scope === "all"}
+                  itemToStringValue={(item) => item.label}
+                >
+                  <SelectTrigger id="profile-select" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {profileItems.map((item) => (
+                        <SelectItem key={item.value} value={item}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {/* 删除当前配置按钮 */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="删除当前配置"
+                  disabled={scope === "all" || !selectedProfile || deleteLoading}
+                  onClick={handleDeleteClick}
+                  className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                >
+                  {deleteLoading ? <Spinner data-icon="inline-start" className="h-4 w-4" /> : <Trash2Icon className="h-4 w-4" />}
+                </Button>
+              </div>
               <FieldDescription>默认使用已标记的配置；全部配置会逐个查询并保留部分错误。</FieldDescription>
             </Field>
+
+            {/* 删除确认提示区域 */}
+            {pendingDelete && (
+              <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <AlertCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div className="flex flex-col gap-2">
+                  <span className="text-destructive font-medium">
+                    确认删除配置「{pendingDelete}」？
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    关联的会话、电表账户及历史用量数据将一并删除，且无法恢复。
+                  </span>
+                  <div className="flex gap-2 mt-1">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleConfirmDelete}
+                      disabled={deleteLoading}
+                    >
+                      {deleteLoading ? <Spinner data-icon="inline-start" /> : null}
+                      确认删除
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPendingDelete(null)}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </FieldGroup>
         ) : (
           <Empty>
@@ -124,3 +192,4 @@ export function ProfileCard({
     </Card>
   )
 }
+

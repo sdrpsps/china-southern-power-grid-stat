@@ -1,5 +1,6 @@
 import { CSGClient, QRCodeType } from "@/lib/csg/client"
 import {
+  deleteProfile,
   getDefaultProfile,
   getProfileByAlias,
   getSessionForProfile,
@@ -230,4 +231,16 @@ export async function ensureProfileExists(alias: string) {
   const profile = await getProfileByAlias(validateProfileAlias(alias))
   if (!profile) throw new Error(`未知用户配置 '${alias}'。`)
   return profile
+}
+
+export async function removeProfile(alias: string) {
+  const validAlias = validateProfileAlias(alias)
+  await deleteProfile(validAlias)
+  await logOperation({
+    operation: "profile.delete",
+    profileAlias: validAlias,
+    status: "success",
+    summary: "用户配置已删除",
+  })
+  return getProfiles()
 }

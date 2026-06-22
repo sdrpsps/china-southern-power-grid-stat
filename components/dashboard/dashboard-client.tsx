@@ -65,6 +65,7 @@ export function DashboardClient() {
   const [verifyState, setVerifyState] =
     useState<ApiState<VerifyPayload>>(initialState)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginMessage, setLoginMessage] = useState<string | null>(null)
   const [smsSending, setSmsSending] = useState(false)
@@ -122,6 +123,26 @@ export function DashboardClient() {
       setSelectedProfile((current) => current || defaultProfile?.alias || payload.profiles[0]?.alias || "")
     } catch (error) {
       setProfileError(getMessage(error))
+    }
+  }
+
+  async function deleteProfile(alias: string) {
+    setDeleteLoading(true)
+    setProfileError(null)
+    try {
+      const payload = await api<{ profiles: PublicProfile[] }>("/api/profiles", {
+        method: "DELETE",
+        body: JSON.stringify({ alias }),
+      })
+      setProfiles(payload.profiles)
+      // 删除后自动切换到第一个剩余配置（如果有）
+      const remaining = payload.profiles
+      const defaultProfile = remaining.find((p) => p.isDefault)
+      setSelectedProfile(defaultProfile?.alias || remaining[0]?.alias || "")
+    } catch (error) {
+      setProfileError(getMessage(error))
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -359,6 +380,8 @@ export function DashboardClient() {
               setScope={setScope}
               verifyLoading={verifyState.loading}
               onVerifySessions={verifySessions}
+              onDeleteProfile={deleteProfile}
+              deleteLoading={deleteLoading}
             />
 
             <LoginCard
