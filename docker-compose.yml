@@ -1,0 +1,13 @@
+services:
+  csg-stat:
+    image: ghcr.dockerproxy.net/sdrpsps/china-southern-power-grid-stat:latest
+    container_name: csg-stat
+    user: "1000:1001"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - BETTER_AUTH_SECRET=
+      - BETTER_AUTH_URL=
+    restart: always
