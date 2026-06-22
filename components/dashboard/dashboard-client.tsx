@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { RefreshCwIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { RefreshCwIcon, LogOut, Key, Copy, Check } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,9 +25,37 @@ import { maskAccountNumber, maskName } from "@/lib/services/privacy"
 import type { PublicProfile } from "@/lib/services/types"
 
 export function DashboardClient() {
+  const router = useRouter()
   const [profiles, setProfiles] = useState<PublicProfile[]>([])
   const [selectedProfile, setSelectedProfile] = useState<string>("")
   const [scope, setScope] = useState("profile")
+
+  // JWT Token 和安全登出状态
+  const [jwtToken, setJwtToken] = useState<string | null>(null)
+  const [showTokenModal, setShowTokenModal] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  async function handleLogout() {
+    await authClient.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  async function showToken() {
+    const { data } = await authClient.token()
+    if (data?.token) {
+      setJwtToken(data.token)
+      setShowTokenModal(true)
+    }
+  }
+
+  function handleCopy() {
+    if (jwtToken) {
+      navigator.clipboard.writeText(jwtToken)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
   const [accountsState, setAccountsState] =
     useState<ApiState<AccountsPayload>>(initialState)
   const [balancesState, setBalancesState] =
@@ -216,6 +246,33 @@ export function DashboardClient() {
     }
   }
 
+  // 首次加载或切换用户配置时，自动从本地数据库缓存加载电表账户
+  useEffect(() => {
+    if (selectedProfile || scope === "all") {
+      loadCachedAccounts()
+    }
+  }, [selectedProfile, scope])
+
+  async function loadCachedAccounts() {
+    setAccountsState((prev) => ({ ...prev, loading: true }))
+    try {
+      const query = new URLSearchParams()
+      if (scope === "profile" && selectedProfile) query.set("profile", selectedProfile)
+      if (scope === "all") query.set("allProfiles", "true")
+      query.set("refresh", "0") // 0 代表读取本地 SQLite 缓存，不重新拉取电网接口
+      const data = await api<AccountsPayload>(`/api/accounts?${query.toString()}`)
+      setAccountsState({ loading: false, data, error: null })
+      if (data.accounts?.length) {
+        setSelectedAccount(data.accounts[0].accountNumber)
+      } else {
+        setSelectedAccount("all")
+      }
+    } catch (error) {
+      setAccountsState({ loading: false, data: null, error: getMessage(error) })
+    }
+  }
+
+
   async function queryBalancesAction() {
     setBalancesState({ loading: true, data: null, error: null })
     try {
@@ -273,10 +330,20 @@ export function DashboardClient() {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={refreshProfiles}>
-            <RefreshCwIcon data-icon="inline-start" />
-            刷新配置
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={showToken} className="gap-2">
+              <Key className="h-4 w-4" />
+              查看 MCP 凭证
+            </Button>
+            <Button variant="outline" onClick={refreshProfiles} className="gap-2">
+              <RefreshCwIcon className="h-4 w-4" />
+              刷新配置
+            </Button>
+            <Button variant="outline" onClick={handleLogout} className="gap-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-500/20">
+              <LogOut className="h-4 w-4" />
+              退出登录
+            </Button>
+          </div>
         </header>
 
         {profileError ? <ErrorAlert title="用户配置错误" message={profileError} /> : null}
@@ -332,6 +399,65 @@ export function DashboardClient() {
             onVerifySessions={verifySessions}
           />
         </section>
+        {showTokenModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/90 p-6 shadow-2xl backdrop-blur-xl transition-all animate-in zoom-in-95 duration-200">
+              <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+              <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
+              
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Key className="h-5 w-5" />
+                    <span className="font-semibold text-lg text-white">Agent MCP 访问凭证</span>
+                  </div>
+                  <button
+                    onClick={() => setShowTokenModal(false)}
+                    className="rounded-lg p-1 text-zinc-400 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  以下是本系统的 API 凭证。若需让 AI Agent（如 Claude Desktop 等）安全调用 MCP 查询您的电费，请在 MCP 请求头中携带此 Token：<br />
+                  <code className="text-blue-300">Authorization: Bearer &lt;你的TOKEN&gt;</code>
+                </p>
+
+                <div className="relative rounded-lg bg-black/40 border border-white/5 p-3">
+                  <textarea
+                    readOnly
+                    value={jwtToken || ""}
+                    className="w-full h-32 bg-transparent text-xs text-zinc-300 font-mono resize-none focus:outline-none scrollbar-thin scrollbar-thumb-zinc-850"
+                  />
+                  <div className="absolute bottom-2 right-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCopy}
+                      className="h-8 gap-1.5 bg-blue-600 hover:bg-blue-500 text-white"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" />
+                          已复制
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          复制凭证
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-zinc-500 border-t border-white/5 pt-3">
+                  提示：此凭证关联了您的管理员 Session，请妥善保管，勿泄露给他人。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )
