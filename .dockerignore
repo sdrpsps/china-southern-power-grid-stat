@@ -1,0 +1,14 @@
+.csg
+.env
+.env*
+.next
+coverage
+data
+Dockerfile
+drizzle
+node_modules
+npm-debug.log*
+*.sqlite
+*.sqlite-*
+*.db
+*.session.json

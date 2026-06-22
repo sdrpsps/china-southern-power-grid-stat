@@ -1,0 +1,111 @@
+# credential-login Specification
+
+## Purpose
+TBD - created by archiving change standardize-mcp-skill-packaging. Update Purpose after archive.
+## Requirements
+### Requirement: 本地会话生成
+项目 SHALL 只通过本地命令生成南方电网会话凭证，并写入本地文件系统。
+
+#### Scenario: 手动登录成功
+- **WHEN** 用户成功完成现有手动登录流程
+- **THEN** 项目在本地写入会话文件
+- **AND** 在多用户模式下，该会话会关联到一个用户配置别名
+- **AND** 命令默认不打印完整会话令牌或序列化会话内容
+
+### Requirement: 对话式登录编排
+项目 SHALL 支持助手引导登录：对话用于说明和选择，凭证生成与会话持久化保持在本地。
+
+#### Scenario: 助手开始对话式登录
+- **WHEN** 用户要求助手登录
+- **THEN** 助手可以启动本地登录命令或 MCP 登录工具
+- **AND** 用户可以通过对话或本地提示选择支持的登录方式
+- **AND** 用户可以提供或确认接收会话的用户配置别名
+- **AND** 生成的会话写入配置好的本地会话路径
+
+### Requirement: 二维码对话式登录
+项目 SHALL 将二维码登录作为优先支持的对话式登录方式。
+
+#### Scenario: 二维码登录开始
+- **WHEN** 用户选择二维码登录
+- **THEN** 系统在本地生成二维码登录链接
+- **AND** 助手向用户展示链接或渲染后的二维码
+- **AND** 系统持续轮询，直到成功、超时或取消
+
+#### Scenario: 二维码登录成功
+- **WHEN** 上游接口确认二维码已扫码并授权
+- **THEN** 系统初始化客户端、验证会话并在本地写入会话文件
+- **AND** 助手报告成功，但不暴露会话内容
+
+#### Scenario: 二维码登录超时
+- **WHEN** 二维码登录未在配置的超时时间内完成
+- **THEN** 系统停止轮询
+- **AND** 助手报告登录超时，并可提示用户重试
+
+### Requirement: 短信验证码对话式登录
+项目 SHALL 通过助手引导流程支持短信验证码登录，并明确处理敏感输入。
+
+#### Scenario: 短信登录开始
+- **WHEN** 用户选择短信验证码登录
+- **THEN** 系统询问手机号并向上游接口请求验证码
+- **AND** 用户可以通过对话或本地提示提供收到的短信验证码
+- **AND** 验证成功后，生成的会话写入本地
+
+#### Scenario: 需要密码
+- **WHEN** 登录方式要求账户密码
+- **THEN** 系统通过本地隐藏终端提示或等价安全输入方式获取密码
+- **AND** 助手指引不鼓励用户在对话中发送密码
+
+### Requirement: 登录后会话验证
+项目 SHALL 在报告登录成功前验证新生成的会话。
+
+#### Scenario: 登录返回无效会话
+- **WHEN** 上游登录流程返回令牌，但会话初始化或验证失败
+- **THEN** 系统不报告登录成功
+- **AND** 助手报告失败原因，但不暴露敏感凭证数据
+
+### Requirement: 凭证隐私
+项目 SHALL 将会话文件、令牌、密码、短信验证码、户号和地址视为敏感本地数据。
+
+#### Scenario: 助手总结登录状态
+- **WHEN** 助手报告登录或查询状态
+- **THEN** 避免打印完整会话内容
+- **AND** 除非用户明确要求完整值，否则遮蔽户号和地址
+
+### Requirement: Web session creation
+The system SHALL support creating South China Power Grid sessions through direct login flows in the Next.js Web application.
+
+#### Scenario: Web login succeeds
+- **WHEN** a user completes a supported Web login flow
+- **THEN** the system initializes the CSG client and verifies the session
+- **AND** the generated session is persisted server-side for the selected profile
+- **AND** the browser response excludes raw token contents
+
+#### Scenario: QR login channel is selected
+- **WHEN** a user creates a QR login code in the Web app
+- **THEN** the dashboard lets the user choose WeChat, Alipay, or CSG App as the QR login channel
+- **AND** the selected channel is sent to the upstream QR creation request
+- **AND** the dashboard identifies which channel the generated QR code belongs to
+
+#### Scenario: Web login fails
+- **WHEN** a Web login flow fails, times out, or returns an invalid session
+- **THEN** the system does not persist the failed session as active
+- **AND** the dashboard displays a sanitized failure reason
+
+### Requirement: Web credential handling
+The system SHALL keep login secrets and session credentials out of client-visible output except where the user directly enters them into a secure form.
+
+#### Scenario: SMS code is submitted
+- **WHEN** a user submits an SMS verification code through the Web app
+- **THEN** the system uses the code only for the login request
+- **AND** the system does not store the SMS code in SQLite or operation logs
+
+#### Scenario: Password is submitted
+- **WHEN** a user submits a password for a password plus SMS flow
+- **THEN** the system uses the password only for the encrypted upstream login request
+- **AND** the system does not store the password in SQLite, browser state, or operation logs
+
+#### Scenario: Session status is displayed
+- **WHEN** the dashboard displays session status
+- **THEN** it shows metadata such as profile alias, label, validity, and update time
+- **AND** it never displays the full raw auth token
+
