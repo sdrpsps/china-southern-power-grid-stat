@@ -18,6 +18,7 @@ cp .env.example .env
 
 - **`BETTER_AUTH_SECRET`**：用于 Token 加密的密钥，可在终端执行 `openssl rand -hex 32` 生成一个随机串。
 - **`BETTER_AUTH_URL`**：您部署应用的访问基准 URL（如本地开发使用 `http://localhost:3000`）。
+- **`MCP_TOKEN_EXPIRES_IN_DAYS`**：Agent MCP 长期访问凭证的有效天数，默认 `365` 天。该值必须不小于 `300`，非法值会回退到默认值。
 
 ### 2. 初始化管理员
 
@@ -98,9 +99,9 @@ http://localhost:3000/api/mcp
 ```
 
 **⚠️ 重要（安全认证）**：
-为了保护您的账户信息，MCP API 已启用 JWT 鉴权。您需要按照以下步骤将本应用接入 Agent：
+为了保护您的账户信息，MCP API 已启用长期 Bearer token 鉴权。默认情况下，仪表盘生成的 MCP token 有效期为 `365` 天，可通过 `MCP_TOKEN_EXPIRES_IN_DAYS` 调整。
 
-1.  在登录系统后，点击仪表盘顶部的 **“查看 MCP 凭证”** 按钮并复制生成的 JWT 令牌。
+1.  在登录系统后，点击仪表盘顶部的 **“查看 MCP 凭证”** 按钮并复制生成的 MCP 访问令牌。
 2.  在您的 Agent 配置文件中，加入以下配置进行接入：
     ```json
     {
@@ -114,6 +115,9 @@ http://localhost:3000/api/mcp
       }
     }
     ```
+3.  如果曾复制过旧的短期 JWT，请重新在仪表盘生成 MCP 凭证并替换 Agent 配置。
+
+请将 MCP token 视为长期 API secret，不要在聊天中粘贴完整 token，也不要提交到 Git。若 token 泄露，请重新生成并更新 Agent 配置；如需让所有旧 token 失效，请轮换 `BETTER_AUTH_SECRET` 或清理/轮换服务端 JWKS 签名密钥。远程部署时请使用 HTTPS，避免在明文链路中传输 Bearer token。
 
 ---
 

@@ -20,6 +20,8 @@ version: 1.1.0
 
 如果需要查询南方电网数据但 MCP 服务或所需工具不可用，提示用户先在当前 agent 中配置 `china-southern-power-grid` MCP 服务。不要猜测本地脚本路径、MCP 地址、启动命令、会话文件位置或凭证目录。
 
+如果 MCP 连接或工具调用报告未授权、凭证缺失、凭证无效或凭证过期，说明当前 agent 的 MCP 配置需要更新长期访问凭证。引导用户在应用仪表盘中重新查看 MCP 凭证，并把新的 `Authorization: Bearer <token>` 配置到 agent 的 MCP 服务设置中；不要要求用户把完整 token 粘贴到对话里，也不要尝试读取浏览器 Cookie、本地 session 文件或其他本地凭证作为替代。
+
 ## 用户配置
 
 - 用户明确指定配置别名时，使用 MCP 工具的 `profile` 参数。
@@ -55,3 +57,4 @@ version: 1.1.0
 - 回答月度每日用电详情或月电费详情时，把 `dailyDetails` 展示为 Markdown 表格，至少包含日期、用电量（度/kWh）和用电额/电费（元）。
 - 如果每日 `charge` 均为 0 或缺失，但 `monthTotalCost` 不为 0，说明上游未返回可用的每日电费明细，不要自行分摊估算。
 - 如果用户提供非数字缴费户号，说明缴费户号必须是数字字符串；在没有电表账户列表确认前不要把该值传给余额或用量工具。
+- 如果用户询问如何配置 Agent 访问，说明本 Skill 依赖已配置的 `china-southern-power-grid` MCP 服务，并且 Agent 配置中需要使用应用生成的长期 MCP Bearer token；不要提供固定 MCP URL、固定 token、本机绝对路径或本地启动命令。
