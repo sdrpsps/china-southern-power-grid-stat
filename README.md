@@ -167,3 +167,9 @@ docker run -d \
 - **代码检查**：`npm run lint`
 - **运行单元测试**：`npm run test`
 - **生产版本构建**：`npm run build`
+
+## 致谢
+
+核心电网接口加解密算法与业务请求封装思路参考并修改自：
+
+- [lmh555168/china_southern_power_grid_stat](https://github.com/lmh555168/china_southern_power_grid_stat)
