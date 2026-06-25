@@ -30,7 +30,9 @@ COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 COPY --chown=nextjs:nextjs docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --chown=nextjs:nextjs scripts/replace-base-path.mjs ./scripts/replace-base-path.mjs
-RUN chmod +x ./docker-entrypoint.sh
+RUN chown -R nextjs:nextjs /app /data \
+  && chmod -R a+rwX /app /data \
+  && chmod +x ./docker-entrypoint.sh
 USER nextjs
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -1,4 +1,12 @@
 import { auth } from "@/lib/auth"
-import { toNextJsHandler } from "better-auth/next-js"
+import { normalizeAuthRequestBasePath } from "@/lib/auth-request"
 
-export const { GET, POST } = toNextJsHandler(auth)
+function handler(request: Request) {
+  return auth.handler(normalizeAuthRequestBasePath(request))
+}
+
+export const GET = handler
+export const POST = handler
+export const PATCH = handler
+export const PUT = handler
+export const DELETE = handler

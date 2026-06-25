@@ -144,7 +144,7 @@ https://mcp.example.com/electricity/api/mcp
 ### 1. 构建本地镜像
 
 ```bash
-docker build -t csg-stat-next .
+docker build -t csg-stat .
 ```
 
 Docker 镜像默认会使用一个 Next.js base path 占位符构建。容器启动时，`docker-entrypoint.sh` 会把构建产物中的占位符替换为运行时传入的 `APP_BASE_PATH`。因此同一镜像可以部署到根路径、`/electricity` 或其他路径前缀。
@@ -162,7 +162,7 @@ docker run -d \
   -v "$PWD/data:/data" \
   -e BETTER_AUTH_SECRET="your_openssl_generated_secret" \
   -e BETTER_AUTH_URL="http://localhost:3000" \
-  csg-stat-next
+  csg-stat
 ```
 
 访问 [http://localhost:3000](http://localhost:3000) 即可开始使用。
@@ -177,7 +177,7 @@ docker run -d \
   -e APP_BASE_PATH="/electricity" \
   -e BETTER_AUTH_SECRET="your_openssl_generated_secret" \
   -e BETTER_AUTH_URL="https://mcp.example.com/electricity" \
-  csg-stat-next
+  csg-stat
 ```
 
 ### 3. Mock 模式容器运行
@@ -190,7 +190,7 @@ docker run -d \
   -e CSG_MOCK=1 \
   -e BETTER_AUTH_SECRET="your_openssl_generated_secret" \
   -e BETTER_AUTH_URL="http://localhost:3000" \
-  csg-stat-next
+  csg-stat
 ```
 
 ---
