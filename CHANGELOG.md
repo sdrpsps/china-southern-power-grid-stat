@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.3.1...v1.3.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* better-auth base path ([08762ee](https://github.com/sdrpsps/china-southern-power-grid-stat/commit/08762ee7ce5f1dc33f77d1e1df3c12228edace16))
+
 ## [1.3.1](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.3.0...v1.3.1) (2026-06-25)
 
 
