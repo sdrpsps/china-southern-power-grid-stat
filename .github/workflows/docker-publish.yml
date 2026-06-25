@@ -1,16 +1,23 @@
 name: Publish Docker Image to GHCR
 
 on:
-  # 仅在 release-please 合并 Release PR 并自动推送 tag 后触发
+  # release-please 使用 GITHUB_TOKEN 创建的 tag 不会触发该 workflow。
+  # release-please 发布镜像逻辑在 release-please.yml 内；这里保留给人工推 tag。
   push:
     tags:
       - 'v*'
   # 保留手动触发，用于紧急修复场景
   workflow_dispatch:
+    inputs:
+      tag:
+        description: '可选：指定要发布的 release tag，例如 v1.3.1'
+        required: false
+        type: string
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   build-and-push:
@@ -22,6 +29,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Resolve image tags
+        id: image
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -41,11 +54,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=
-            latest
+            type=raw,value=${{ env.RELEASE_TAG }},enable=${{ startsWith(env.RELEASE_TAG, 'v') }}
+            type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }},enable=${{ startsWith(env.RELEASE_TAG, 'v') }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }},enable=${{ startsWith(env.RELEASE_TAG, 'v') }}
+            type=raw,value=${{ steps.image.outputs.short_sha }}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
