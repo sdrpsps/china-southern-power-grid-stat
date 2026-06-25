@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.2.0...v1.3.0) (2026-06-25)
+
+
+### Features
+
+* support runtime app base path deployment ([4118547](https://github.com/sdrpsps/china-southern-power-grid-stat/commit/411854753d4402ab30100db6b383df3ec7341bbe))
+
 ## [1.2.0](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.1.0...v1.2.0) (2026-06-23)
 
 
