@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.3.0...v1.3.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* preserve app base path on auth redirect ([0335b19](https://github.com/sdrpsps/china-southern-power-grid-stat/commit/0335b19f5757397fe68e933d862593b3fc0b0a7f))
+
 ## [1.3.0](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.2.0...v1.3.0) (2026-06-25)
 
 
