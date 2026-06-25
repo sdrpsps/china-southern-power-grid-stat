@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { APP_BASE_PATH, stripBasePath, withBasePath } from "@/lib/app-path";
+import { APP_BASE_PATH, stripBasePath } from "@/lib/app-path";
 
 export async function proxy(request: NextRequest) {
-  const pathname = stripBasePath(request.nextUrl.pathname, request.nextUrl.basePath || APP_BASE_PATH);
+  const basePath = request.nextUrl.basePath || APP_BASE_PATH;
+  const pathname = stripBasePath(request.nextUrl.pathname, basePath);
 
   // 1. 必须排除静态文件、认证核心路由、登录页以及 MCP 端点
   if (
@@ -24,7 +25,10 @@ export async function proxy(request: NextRequest) {
   });
 
   if (!session) {
-    return NextResponse.redirect(new URL(withBasePath("/login"), request.url));
+    const loginUrl = request.nextUrl.clone();
+    if (basePath) loginUrl.basePath = basePath;
+    loginUrl.pathname = "/login";
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
