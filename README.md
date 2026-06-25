@@ -16,9 +16,19 @@ cp .env.example .env
 
 随后修改 `.env` 里的必要选项：
 
+- **`APP_BASE_PATH`**：可选的应用挂载路径前缀，例如 `/electricity`。默认留空表示根路径。
 - **`BETTER_AUTH_SECRET`**：用于 Token 加密的密钥，可在终端执行 `openssl rand -hex 32` 生成一个随机串。
-- **`BETTER_AUTH_URL`**：您部署应用的访问基准 URL（如本地开发使用 `http://localhost:3000`）。
+- **`BETTER_AUTH_URL`**：您部署应用的外部访问 URL。如果设置了 `APP_BASE_PATH` 时请填写完整应用入口，例如 `https://mcp.example.com/electricity`。
 - **`MCP_TOKEN_EXPIRES_IN_DAYS`**：Agent MCP 长期访问凭证的有效天数，默认 `365` 天。该值必须不小于 `300`，非法值会回退到默认值。
+
+路径前缀部署时，`BETTER_AUTH_URL` 和 `APP_BASE_PATH` 应表达同一个外部入口。项目会自动为 Better Auth 补上 `/api/auth`，不要手动把 `/api/auth` 写进 `BETTER_AUTH_URL`：
+
+```text
+BETTER_AUTH_URL=https://mcp.example.com/electricity
+APP_BASE_PATH=/electricity
+```
+
+上述配置下，Better Auth 实际使用的 auth base URL 会是 `https://mcp.example.com/electricity/api/auth`。
 
 ### 2. 初始化管理员
 
@@ -98,6 +108,12 @@ CSG_MOCK=1 npm run dev
 http://localhost:3000/api/mcp
 ```
 
+如果容器运行时设置了 `APP_BASE_PATH=/electricity`，则公网路径会变为：
+
+```text
+https://mcp.example.com/electricity/api/mcp
+```
+
 **⚠️ 重要（安全认证）**：
 为了保护您的账户信息，MCP API 已启用长期 Bearer token 鉴权。默认情况下，仪表盘生成的 MCP token 有效期为 `365` 天，可通过 `MCP_TOKEN_EXPIRES_IN_DAYS` 调整。
 
@@ -131,6 +147,10 @@ http://localhost:3000/api/mcp
 docker build -t csg-stat-next .
 ```
 
+Docker 镜像默认会使用一个 Next.js base path 占位符构建。容器启动时，`docker-entrypoint.sh` 会把构建产物中的占位符替换为运行时传入的 `APP_BASE_PATH`。因此同一镜像可以部署到根路径、`/electricity` 或其他路径前缀。
+
+如果已经启动过一个容器实例并完成占位符替换，之后要改成另一个路径前缀，请重新创建容器实例，不要只修改旧容器的环境变量后重启。
+
 ### 2. 运行容器
 
 将本地主机的持久化数据目录挂载到容器的 `/data` 目录，并**必须传入 Better Auth 的安全配置变量**：
@@ -146,6 +166,19 @@ docker run -d \
 ```
 
 访问 [http://localhost:3000](http://localhost:3000) 即可开始使用。
+
+如果要通过同一域名的 `/electricity` 路径访问整个应用：
+
+```bash
+docker run -d \
+  --name csg-stat \
+  -p 3000:3000 \
+  -v "$PWD/data:/data" \
+  -e APP_BASE_PATH="/electricity" \
+  -e BETTER_AUTH_SECRET="your_openssl_generated_secret" \
+  -e BETTER_AUTH_URL="https://mcp.example.com/electricity" \
+  csg-stat-next
+```
 
 ### 3. Mock 模式容器运行
 

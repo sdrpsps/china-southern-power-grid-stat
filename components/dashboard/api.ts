@@ -1,5 +1,7 @@
+import { withBasePath } from "@/lib/app-path"
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(withBasePath(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",

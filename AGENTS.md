@@ -73,6 +73,7 @@ CSG_MOCK=1 npm run dev
 - 修改数据库 schema 时同步考虑迁移/初始化逻辑、仓储层、测试和 OpenSpec 规格。
 - 修改 MCP tool 入参/出参时同步更新 `lib/mcp/server.ts`、相关 route、测试、README、`skills/china-southern-power-grid-stat/SKILL.md` 和 OpenSpec specs。
 - 修改网页 UI 时优先复用 `components/ui/` 与 `components/dashboard/` 的现有组件和布局模式。
+- Git commit 消息必须遵循 Conventional Commits 规范，例如 `feat: ...`、`fix: ...`、`docs: ...`、`chore: ...`。
 
 ## 安全与配置
 

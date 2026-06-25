@@ -14,7 +14,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card"
 import {
   Field,
@@ -28,7 +27,7 @@ interface LoginPageClientProps {
 
 export function LoginPageClient({ hasUsers }: LoginPageClientProps) {
   const router = useRouter()
-  const [isRegister, setIsRegister] = useState(!hasUsers)
+  const isRegister = !hasUsers
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 

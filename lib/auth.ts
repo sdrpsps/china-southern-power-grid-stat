@@ -1,11 +1,15 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "@better-auth/drizzle-adapter"
 import { username, jwt } from "better-auth/plugins"
+import { AUTH_ROUTE_PATH } from "@/lib/app-path"
+import { getBetterAuthBaseUrl } from "@/lib/auth-url"
 import { getDb } from "@/lib/db/client"
 import * as schema from "@/lib/db/schema"
 import { count } from "drizzle-orm"
 
 export const auth = betterAuth({
+  baseURL: getBetterAuthBaseUrl(),
+  basePath: AUTH_ROUTE_PATH,
   database: drizzleAdapter(getDb(), {
     provider: "sqlite",
     schema: {
