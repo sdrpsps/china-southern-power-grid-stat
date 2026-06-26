@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 
 import { fail, ok, readJson, toBoolean } from "@/lib/api/http"
-import { getCachedAccounts, listAccounts } from "@/lib/services/queries"
+import { listAccounts } from "@/lib/services/queries"
 import { normalizeProfileSelector } from "@/lib/services/validation"
 
 export const runtime = "nodejs"
@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
       profile: params.get("profile") || undefined,
       allProfiles: toBoolean(params.get("allProfiles")),
     })
-    const refresh = params.get("refresh") !== "0"
-    return ok(refresh ? await listAccounts(selector) : await getCachedAccounts(selector))
+    return ok(await listAccounts(selector))
   } catch (error) {
     return fail(error)
   }

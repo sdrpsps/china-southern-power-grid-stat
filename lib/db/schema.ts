@@ -37,87 +37,6 @@ export const sessions = sqliteTable(
   (table) => [uniqueIndex("sessions_profile_unique").on(table.profileId)]
 )
 
-export const electricityAccounts = sqliteTable(
-  "electricity_accounts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    profileId: integer("profile_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-    accountNumber: text("account_number").notNull(),
-    areaCode: text("area_code").notNull(),
-    eleCustomerId: text("ele_customer_id").notNull(),
-    meteringPointId: text("metering_point_id").notNull(),
-    meteringPointNumber: text("metering_point_number").notNull().default(""),
-    address: text("address").notNull(),
-    userName: text("user_name").notNull(),
-    refreshedAt: text("refreshed_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("accounts_profile_account_unique").on(
-      table.profileId,
-      table.accountNumber
-    ),
-    index("accounts_profile_idx").on(table.profileId),
-  ]
-)
-
-export const balanceSnapshots = sqliteTable(
-  "balance_snapshots",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    profileId: integer("profile_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-    accountNumber: text("account_number").notNull(),
-    balance: real("balance").notNull(),
-    arrears: real("arrears").notNull(),
-    queriedAt: text("queried_at").notNull(),
-  },
-  (table) => [index("balances_profile_account_idx").on(table.profileId, table.accountNumber)]
-)
-
-export const usageMonths = sqliteTable(
-  "usage_months",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    profileId: integer("profile_id")
-      .notNull()
-      .references(() => profiles.id, { onDelete: "cascade" }),
-    accountNumber: text("account_number").notNull(),
-    year: integer("year").notNull(),
-    month: integer("month").notNull(),
-    monthTotalCost: real("month_total_cost"),
-    monthTotalKwh: real("month_total_kwh"),
-    ladder: integer("ladder"),
-    ladderStartDate: text("ladder_start_date"),
-    ladderRemainingKwh: real("ladder_remaining_kwh"),
-    tariff: real("tariff"),
-    queriedAt: text("queried_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("usage_month_profile_account_month_unique").on(
-      table.profileId,
-      table.accountNumber,
-      table.year,
-      table.month
-    ),
-  ]
-)
-
-export const usageDays = sqliteTable(
-  "usage_days",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    usageMonthId: integer("usage_month_id")
-      .notNull()
-      .references(() => usageMonths.id, { onDelete: "cascade" }),
-    date: text("date").notNull(),
-    charge: real("charge").notNull(),
-    kwh: real("kwh").notNull(),
-  },
-  (table) => [uniqueIndex("usage_days_month_date_unique").on(table.usageMonthId, table.date)]
-)
 
 export const operationLogs = sqliteTable(
   "operation_logs",
@@ -134,12 +53,11 @@ export const operationLogs = sqliteTable(
   (table) => [index("operation_logs_created_idx").on(table.createdAt)]
 )
 
-export const profilesRelations = relations(profiles, ({ one, many }) => ({
+export const profilesRelations = relations(profiles, ({ one }) => ({
   session: one(sessions, {
     fields: [profiles.id],
     references: [sessions.profileId],
   }),
-  accounts: many(electricityAccounts),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -152,10 +70,6 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 export type ProfileRow = typeof profiles.$inferSelect
 export type NewProfileRow = typeof profiles.$inferInsert
 export type SessionRow = typeof sessions.$inferSelect
-export type AccountRow = typeof electricityAccounts.$inferSelect
-export type BalanceSnapshotRow = typeof balanceSnapshots.$inferSelect
-export type UsageMonthRow = typeof usageMonths.$inferSelect
-export type UsageDayRow = typeof usageDays.$inferSelect
 
 // Better Auth Schema tables for user accounts and sessions
 export const authUsers = sqliteTable("auth_user", {

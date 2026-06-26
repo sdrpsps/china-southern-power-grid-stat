@@ -1,19 +1,14 @@
-import { and, desc, eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 
 import { getDb } from "@/lib/db/client"
 import {
-  balanceSnapshots,
-  electricityAccounts,
   operationLogs,
   profiles,
   sessions,
-  usageDays,
-  usageMonths,
-  type AccountRow,
   type ProfileRow,
   type SessionRow,
 } from "@/lib/db/schema"
-import type { AccountRecord, BalanceRecord, PublicProfile, UsageRecord } from "@/lib/services/types"
+import type { PublicProfile } from "@/lib/services/types"
 import { maskAccountNumber, sanitizeErrorMessage } from "@/lib/services/privacy"
 
 function now() {
@@ -162,108 +157,6 @@ export async function listProfilesWithSessions() {
     .leftJoin(sessions, eq(sessions.profileId, profiles.id))
     .orderBy(desc(profiles.isDefault), profiles.alias)
     .all()
-}
-
-export async function upsertAccountSnapshot(profileId: number, account: AccountRecord) {
-  const db = getDb()
-  const timestamp = now()
-  const existing = db
-    .select()
-    .from(electricityAccounts)
-    .where(and(eq(electricityAccounts.profileId, profileId), eq(electricityAccounts.accountNumber, account.accountNumber)))
-    .get()
-  const values = {
-    areaCode: account.areaCode,
-    eleCustomerId: account.eleCustomerId,
-    meteringPointId: account.meteringPointId,
-    meteringPointNumber: account.meteringPointNumber,
-    address: account.address,
-    userName: account.userName,
-    refreshedAt: timestamp,
-  }
-  if (existing) {
-    db.update(electricityAccounts).set(values).where(eq(electricityAccounts.id, existing.id)).run()
-  } else {
-    db.insert(electricityAccounts)
-      .values({ profileId, accountNumber: account.accountNumber, ...values })
-      .run()
-  }
-}
-
-export async function listAccountSnapshots(profileId: number): Promise<AccountRow[]> {
-  return getDb()
-    .select()
-    .from(electricityAccounts)
-    .where(eq(electricityAccounts.profileId, profileId))
-    .all()
-}
-
-export async function insertBalanceSnapshot(profileId: number, balance: BalanceRecord) {
-  getDb()
-    .insert(balanceSnapshots)
-    .values({
-      profileId,
-      accountNumber: balance.accountNumber,
-      balance: balance.balance,
-      arrears: balance.arrears,
-      queriedAt: now(),
-    })
-    .run()
-}
-
-export async function upsertUsageSnapshot(profileId: number, usage: UsageRecord) {
-  const db = getDb()
-  const timestamp = now()
-  const existing = db
-    .select()
-    .from(usageMonths)
-    .where(
-      and(
-        eq(usageMonths.profileId, profileId),
-        eq(usageMonths.accountNumber, usage.accountNumber),
-        eq(usageMonths.year, usage.year),
-        eq(usageMonths.month, usage.month)
-      )
-    )
-    .get()
-
-  const values = {
-    monthTotalCost: usage.monthTotalCost,
-    monthTotalKwh: usage.monthTotalKwh,
-    ladder: usage.ladder.ladder,
-    ladderStartDate: usage.ladder.startDate,
-    ladderRemainingKwh: usage.ladder.remainingKwh,
-    tariff: usage.ladder.tariff,
-    queriedAt: timestamp,
-  }
-  let usageMonthId: number
-  if (existing) {
-    usageMonthId = existing.id
-    db.update(usageMonths).set(values).where(eq(usageMonths.id, existing.id)).run()
-    db.delete(usageDays).where(eq(usageDays.usageMonthId, existing.id)).run()
-  } else {
-    const result = db
-      .insert(usageMonths)
-      .values({
-        profileId,
-        accountNumber: usage.accountNumber,
-        year: usage.year,
-        month: usage.month,
-        ...values,
-      })
-      .run()
-    usageMonthId = Number(result.lastInsertRowid)
-  }
-  for (const day of usage.dailyDetails) {
-    db.insert(usageDays)
-      .values({
-        usageMonthId,
-        date: day.date,
-        charge: day.charge,
-        kwh: day.kwh,
-      })
-      .run()
-  }
 }
 
 export async function logOperation(input: {

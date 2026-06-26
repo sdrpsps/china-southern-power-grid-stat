@@ -8,7 +8,6 @@ import {
   getProfileByAlias,
   listPublicProfiles,
   saveSession,
-  upsertAccountSnapshot,
   upsertProfile,
 } from "@/lib/services/repositories"
 
@@ -39,19 +38,4 @@ describe("repositories", () => {
     expect(JSON.stringify(rows)).not.toContain("secret-token")
   })
 
-  it("upserts account snapshots", async () => {
-    const profile = await upsertProfile({ alias: "default" })
-    await upsertAccountSnapshot(profile.id, {
-      profile: "default",
-      accountNumber: "030000000000001",
-      areaCode: "030000",
-      eleCustomerId: "customer",
-      meteringPointId: "point",
-      meteringPointNumber: "mp",
-      address: "广东省广州市示例路1号",
-      userName: "测试用户",
-    })
-
-    expect(await getProfileByAlias("default")).not.toBeNull()
-  })
 })

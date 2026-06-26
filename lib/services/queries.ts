@@ -4,11 +4,7 @@ import {
   resolveSessionProfiles,
 } from "@/lib/services/profiles"
 import {
-  insertBalanceSnapshot,
-  listAccountSnapshots,
   logOperation,
-  upsertAccountSnapshot,
-  upsertUsageSnapshot,
 } from "@/lib/services/repositories"
 import type {
   AccountRecord,
@@ -49,7 +45,6 @@ export async function listAccounts(selector: ProfileSelector = {}) {
       for (const account of profileAccounts) {
         const record = toAccountRecord(profile.alias, account)
         accounts.push(record)
-        await upsertAccountSnapshot(profile.id, record)
       }
       await logOperation({
         operation: "accounts.list",
@@ -126,7 +121,6 @@ export async function queryBalances(options: {
             queriedAt: new Date().toISOString(),
           }
           balances.push(record)
-          await insertBalanceSnapshot(profile.id, record)
         } catch (error) {
           errors.push({ profile: profile.alias, accountNumber: account.accountNumber, error: getErrorMessage(error) })
         }
@@ -186,7 +180,6 @@ export async function queryUsage(options: {
             queriedAt: new Date().toISOString(),
           }
           usages.push(record)
-          await upsertUsageSnapshot(profile.id, record)
         } catch (error) {
           errors.push({ profile: profile.alias, accountNumber: account.accountNumber, error: getErrorMessage(error) })
         }
@@ -202,26 +195,4 @@ export async function queryUsage(options: {
     throw new Error(errors[0].error)
   }
   return { usages, errors }
-}
-
-export async function getCachedAccounts(selector: ProfileSelector = {}) {
-  const profiles = await resolveSessionProfiles(selector)
-  const accounts: AccountRecord[] = []
-  for (const profile of profiles) {
-    const rows = await listAccountSnapshots(profile.id)
-    accounts.push(
-      ...rows.map((row) => ({
-        profile: profile.alias,
-        accountNumber: row.accountNumber,
-        areaCode: row.areaCode,
-        eleCustomerId: row.eleCustomerId,
-        meteringPointId: row.meteringPointId,
-        meteringPointNumber: row.meteringPointNumber,
-        address: row.address,
-        userName: row.userName,
-        refreshedAt: row.refreshedAt,
-      }))
-    )
-  }
-  return { accounts, errors: [] as QueryError[] }
 }

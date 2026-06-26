@@ -20,52 +20,7 @@ const statements = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS sessions_profile_unique ON sessions(profile_id)`,
-  `CREATE TABLE IF NOT EXISTS electricity_accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    account_number TEXT NOT NULL,
-    area_code TEXT NOT NULL,
-    ele_customer_id TEXT NOT NULL,
-    metering_point_id TEXT NOT NULL,
-    metering_point_number TEXT NOT NULL DEFAULT '',
-    address TEXT NOT NULL,
-    user_name TEXT NOT NULL,
-    refreshed_at TEXT NOT NULL
-  )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS accounts_profile_account_unique ON electricity_accounts(profile_id, account_number)`,
-  `CREATE INDEX IF NOT EXISTS accounts_profile_idx ON electricity_accounts(profile_id)`,
-  `CREATE TABLE IF NOT EXISTS balance_snapshots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    account_number TEXT NOT NULL,
-    balance REAL NOT NULL,
-    arrears REAL NOT NULL,
-    queried_at TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS balances_profile_account_idx ON balance_snapshots(profile_id, account_number)`,
-  `CREATE TABLE IF NOT EXISTS usage_months (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    account_number TEXT NOT NULL,
-    year INTEGER NOT NULL,
-    month INTEGER NOT NULL,
-    month_total_cost REAL,
-    month_total_kwh REAL,
-    ladder INTEGER,
-    ladder_start_date TEXT,
-    ladder_remaining_kwh REAL,
-    tariff REAL,
-    queried_at TEXT NOT NULL
-  )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS usage_month_profile_account_month_unique ON usage_months(profile_id, account_number, year, month)`,
-  `CREATE TABLE IF NOT EXISTS usage_days (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    usage_month_id INTEGER NOT NULL REFERENCES usage_months(id) ON DELETE CASCADE,
-    date TEXT NOT NULL,
-    charge REAL NOT NULL,
-    kwh REAL NOT NULL
-  )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS usage_days_month_date_unique ON usage_days(usage_month_id, date)`,
+
   `CREATE TABLE IF NOT EXISTS operation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     operation TEXT NOT NULL,
