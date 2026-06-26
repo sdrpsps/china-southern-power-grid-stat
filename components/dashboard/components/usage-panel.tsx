@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { EmptyState, ErrorAlert, ErrorsList, LoadingRows, Metric } from "@/components/dashboard/common"
+import { EmptyState, ErrorAlert, ErrorsList, LoadingRows, Metric } from "@/components/dashboard/components/common"
 import { chartConfig } from "@/components/dashboard/constants"
 import type { ApiState, UsagePayload } from "@/components/dashboard/types"
 import { maskAccountNumber } from "@/lib/services/privacy"

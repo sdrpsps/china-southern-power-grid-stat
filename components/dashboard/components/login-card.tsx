@@ -1,3 +1,5 @@
+"use client"
+
 import { useRef } from "react"
 import { LogInIcon, QrCodeIcon, SendIcon } from "lucide-react"
 
@@ -20,40 +22,28 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { ErrorAlert } from "@/components/dashboard/common"
+import { ErrorAlert } from "./common"
 import { qrChannelOptions, type QrChannel } from "@/components/dashboard/constants"
+import { useDashboardStore } from "@/components/dashboard/stores"
 
-export function LoginCard({
-  smsSending,
-  smsLoginLoading,
-  qrCreating,
-  qrCompleting,
-  qrChannel,
-  setQrChannel,
-  qrLogin,
-  setQrLogin,
-  loginMessage,
-  loginError,
-  onSendLoginSms,
-  onCompleteSmsLogin,
-  onCreateQrLogin,
-  onCompleteQrLogin,
-}: {
-  smsSending: boolean
-  smsLoginLoading: boolean
-  qrCreating: boolean
-  qrCompleting: boolean
-  qrChannel: QrChannel
-  setQrChannel: (value: QrChannel) => void
-  qrLogin: { loginId: string; qrUrl: string; channel: QrChannel } | null
-  setQrLogin: (value: { loginId: string; qrUrl: string; channel: QrChannel } | null) => void
-  loginMessage: string | null
-  loginError: string | null
-  onSendLoginSms: (phoneNo: string) => void
-  onCompleteSmsLogin: (formData: FormData) => void
-  onCreateQrLogin: () => void
-  onCompleteQrLogin: (formData: FormData) => void
-}) {
+export function LoginCard() {
+  const {
+    smsSending,
+    smsLoginLoading,
+    qrCreating,
+    qrCompleting,
+    qrChannel,
+    setQrChannel,
+    qrLogin,
+    setQrLogin,
+    loginMessage,
+    loginError,
+    sendLoginSms,
+    completeSmsLogin,
+    createQrLogin,
+    completeQrLogin,
+  } = useDashboardStore()
+
   const smsFormRef = useRef<HTMLFormElement>(null)
   const qrChannelLabel =
     qrChannelOptions.find((option) => option.value === qrChannel)?.label || "微信"
@@ -62,7 +52,7 @@ export function LoginCard({
     const form = smsFormRef.current
     if (!form) return
     const formData = new FormData(form)
-    onSendLoginSms(String(formData.get("phoneNo") || ""))
+    sendLoginSms(String(formData.get("phoneNo") || ""))
   }
 
   return (
@@ -79,7 +69,7 @@ export function LoginCard({
           </TabsList>
 
           <TabsContent value="sms">
-            <form ref={smsFormRef} action={onCompleteSmsLogin}>
+            <form ref={smsFormRef} action={completeSmsLogin}>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="login-alias">配置别名</FieldLabel>
@@ -117,7 +107,7 @@ export function LoginCard({
           </TabsContent>
 
           <TabsContent value="qr">
-            <form action={onCompleteQrLogin}>
+            <form action={completeQrLogin}>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="qr-alias">配置别名</FieldLabel>
@@ -167,7 +157,7 @@ export function LoginCard({
                   </Field>
                 ) : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="button" variant="outline" onClick={onCreateQrLogin} disabled={qrCreating || qrCompleting}>
+                  <Button type="button" variant="outline" onClick={createQrLogin} disabled={qrCreating || qrCompleting}>
                     {qrCreating ? <Spinner data-icon="inline-start" /> : <QrCodeIcon data-icon="inline-start" />}
                     生成二维码
                   </Button>

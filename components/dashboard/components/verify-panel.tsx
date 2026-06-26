@@ -9,9 +9,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { EmptyState, ErrorAlert, LoadingRows } from "@/components/dashboard/common"
+import { EmptyState, ErrorAlert, LoadingRows } from "@/components/dashboard/components/common"
 import type { ApiState, VerifyPayload } from "@/components/dashboard/types"
 import type { PublicProfile } from "@/lib/services/types"
+
+function formatDateTime(value?: string) {
+  if (!value) return "-"
+  try {
+    return new Date(value).toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  } catch {
+    return value
+  }
+}
 
 export function VerifyPanel({
   state,
@@ -49,7 +64,7 @@ export function VerifyPanel({
               </Badge>
             </TableCell>
             <TableCell className="text-muted-foreground">{row.reason || "-"}</TableCell>
-            <TableCell className="text-muted-foreground">{row.lastVerifiedAt || "-"}</TableCell>
+            <TableCell className="text-muted-foreground">{formatDateTime(row.lastVerifiedAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

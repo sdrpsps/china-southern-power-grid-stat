@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { EmptyState, ErrorAlert, ErrorsList, LoadingRows } from "@/components/dashboard/common"
+import { EmptyState, ErrorAlert, ErrorsList, LoadingRows } from "@/components/dashboard/components/common"
 import type { AccountsPayload, ApiState } from "@/components/dashboard/types"
 import { maskAccountNumber, maskAddress, maskName } from "@/lib/services/privacy"
 

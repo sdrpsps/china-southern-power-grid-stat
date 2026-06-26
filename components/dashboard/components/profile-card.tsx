@@ -1,3 +1,5 @@
+"use client"
+
 import { ShieldCheckIcon, Trash2Icon, AlertCircleIcon } from "lucide-react"
 import { useState } from "react"
 
@@ -33,31 +35,26 @@ import {
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import type { SelectOption } from "@/components/dashboard/types"
+import { useDashboardStore } from "@/components/dashboard/stores"
 
-export function ProfileCard({
-  hasProfiles,
-  profileItems,
-  selectedProfile,
-  setSelectedProfile,
-  scope,
-  setScope,
-  verifyLoading,
-  onVerifySessions,
-  onDeleteProfile,
-  deleteLoading,
-}: {
-  hasProfiles: boolean
-  profileItems: SelectOption[]
-  selectedProfile: string
-  setSelectedProfile: (value: string) => void
-  scope: string
-  setScope: (value: string) => void
-  verifyLoading: boolean
-  onVerifySessions: () => void
-  onDeleteProfile: (alias: string) => void
-  deleteLoading: boolean
-}) {
+export function ProfileCard() {
+  const {
+    profiles,
+    selectedProfile,
+    setSelectedProfile,
+    scope,
+    setScope,
+    verifyState,
+    verifySessions,
+    deleteProfile,
+    deleteLoading,
+    profileItems,
+  } = useDashboardStore()
+
+  const hasProfiles = profiles.length > 0
+  const items = profileItems()
+  const verifyLoading = verifyState.loading
+
   // 等待确认的配置别名，非空时显示确认提示
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
@@ -68,7 +65,7 @@ export function ProfileCard({
 
   function handleConfirmDelete() {
     if (!pendingDelete) return
-    onDeleteProfile(pendingDelete)
+    deleteProfile(pendingDelete)
     setPendingDelete(null)
   }
 
@@ -101,8 +98,8 @@ export function ProfileCard({
               <FieldLabel htmlFor="profile-select">当前配置</FieldLabel>
               <div className="flex gap-2">
                 <Select
-                  items={profileItems}
-                  value={profileItems.find((item) => item.value === selectedProfile) || profileItems[0]}
+                  items={items}
+                  value={items.find((item) => item.value === selectedProfile) || items[0]}
                   onValueChange={(value) => {
                     setPendingDelete(null)
                     setSelectedProfile(value?.value || "")
@@ -115,7 +112,7 @@ export function ProfileCard({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {profileItems.map((item) => (
+                      {items.map((item) => (
                         <SelectItem key={item.value} value={item}>
                           {item.label}
                         </SelectItem>
@@ -184,7 +181,7 @@ export function ProfileCard({
         )}
       </CardContent>
       <CardFooter className="flex gap-2">
-        <Button onClick={onVerifySessions} disabled={!hasProfiles || verifyLoading}>
+        <Button onClick={verifySessions} disabled={!hasProfiles || verifyLoading}>
           {verifyLoading ? <Spinner data-icon="inline-start" /> : <ShieldCheckIcon data-icon="inline-start" />}
           验证会话
         </Button>
@@ -192,4 +189,3 @@ export function ProfileCard({
     </Card>
   )
 }
-

@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { EmptyState, ErrorAlert, ErrorsList, LoadingRows, Metric } from "@/components/dashboard/common"
+import { EmptyState, ErrorAlert, ErrorsList, LoadingRows, Metric } from "@/components/dashboard/components/common"
 import type { ApiState, BalancesPayload } from "@/components/dashboard/types"
 import { maskAccountNumber, maskAddress, maskName } from "@/lib/services/privacy"
 

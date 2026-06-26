@@ -1,7 +1,7 @@
-import { ActivityIcon, WalletCardsIcon } from "lucide-react"
+import { useMemo } from "react"
+import { ActivityIcon, WalletCardsIcon, CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import type { SelectOption } from "@/components/dashboard/types"
 import {
   Select,
@@ -12,6 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
+
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { MonthPicker } from "@/components/ui/monthpicker"
 
 export function QueryControls({
   accountItems,
@@ -31,19 +35,22 @@ export function QueryControls({
   label: string
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
-      <AccountSelect
-        accountItems={accountItems}
-        selectedAccount={selectedAccount}
-        setSelectedAccount={setSelectedAccount}
-        disabled={disabled}
-        className="w-full sm:w-52"
-      />
+    <FieldGroup className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <Field className="flex-1 sm:w-52 sm:flex-none">
+        <FieldLabel className="sr-only">选择电表账户</FieldLabel>
+        <AccountSelect
+          accountItems={accountItems}
+          selectedAccount={selectedAccount}
+          setSelectedAccount={setSelectedAccount}
+          disabled={disabled}
+          className="w-full"
+        />
+      </Field>
       <Button onClick={onSubmit} disabled={disabled || loading}>
         {loading ? <Spinner data-icon="inline-start" /> : <WalletCardsIcon data-icon="inline-start" />}
         {label}
       </Button>
-    </div>
+    </FieldGroup>
   )
 }
 
@@ -70,22 +77,55 @@ export function UsageControls({
   loading: boolean
   disabled: boolean
 }) {
+  const currentDate = useMemo(() => {
+    const y = parseInt(year, 10)
+    const m = parseInt(month, 10) - 1
+    return isNaN(y) || isNaN(m) ? new Date() : new Date(y, m)
+  }, [year, month])
+
   return (
-    <div className="grid gap-2 sm:grid-cols-[minmax(160px,1fr)_90px_80px_auto]">
-      <AccountSelect
-        accountItems={accountItems}
-        selectedAccount={selectedAccount}
-        setSelectedAccount={setSelectedAccount}
-        disabled={disabled}
-        className="w-full"
-      />
-      <Input value={year} onChange={(event) => setYear(event.target.value)} inputMode="numeric" aria-label="年份" />
-      <Input value={month} onChange={(event) => setMonth(event.target.value)} inputMode="numeric" aria-label="月份" />
+    <FieldGroup className="grid gap-2 sm:grid-cols-[minmax(160px,1fr)_160px_auto] sm:items-end">
+      <Field>
+        <FieldLabel className="sr-only">选择电表账户</FieldLabel>
+        <AccountSelect
+          accountItems={accountItems}
+          selectedAccount={selectedAccount}
+          setSelectedAccount={setSelectedAccount}
+          disabled={disabled}
+          className="w-full"
+        />
+      </Field>
+      <Field>
+        <FieldLabel className="sr-only">选择月份</FieldLabel>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
+                disabled={disabled}
+              />
+            }
+          >
+            <CalendarIcon data-icon="inline-start" />
+            {year}年{month.padStart(2, "0")}月
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <MonthPicker
+              selectedMonth={currentDate}
+              onMonthSelect={(date) => {
+                setYear(String(date.getFullYear()))
+                setMonth(String(date.getMonth() + 1))
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      </Field>
       <Button onClick={onSubmit} disabled={disabled || loading}>
         {loading ? <Spinner data-icon="inline-start" /> : <ActivityIcon data-icon="inline-start" />}
         查询用量
       </Button>
-    </div>
+    </FieldGroup>
   )
 }
 
