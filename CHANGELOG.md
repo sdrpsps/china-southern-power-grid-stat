@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.3.2...v1.4.0) (2026-06-26)
+
+
+### Features
+
+* implement MCP token management system with database persistence and CRUD API endpoints ([0f46195](https://github.com/sdrpsps/china-southern-power-grid-stat/commit/0f4619586a124252d3a5d1b1643cd7fac9458b2d))
+* implement Zustand store slices and add MonthPicker and Popover UI components ([cff0957](https://github.com/sdrpsps/china-southern-power-grid-stat/commit/cff09578f4417de76d58ed60ffcd517ec14a5db8))
+
 ## [1.3.2](https://github.com/sdrpsps/china-southern-power-grid-stat/compare/v1.3.1...v1.3.2) (2026-06-25)
 
 
