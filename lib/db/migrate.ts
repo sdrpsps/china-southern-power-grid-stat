@@ -83,6 +83,15 @@ const statements = [
     created_at INTEGER NOT NULL,
     expires_at INTEGER
   )`,
+  `CREATE TABLE IF NOT EXISTS mcp_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES auth_user(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS mcp_tokens_key_unique ON mcp_tokens(token_key)`,
 ]
 
 export function runMigrations(sqlite: Database.Database) {

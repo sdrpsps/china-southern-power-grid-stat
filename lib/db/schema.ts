@@ -139,4 +139,35 @@ export const authJwks = sqliteTable("jwks", {
 
 export type AuthJwksRow = typeof authJwks.$inferSelect
 
+export const mcpTokens = sqliteTable(
+  "mcp_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    tokenKey: text("token_key").notNull(),
+    name: text("name").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("mcp_tokens_key_unique").on(table.tokenKey),
+  ]
+)
+
+export type McpTokenRow = typeof mcpTokens.$inferSelect
+
+export const mcpTokensRelations = relations(mcpTokens, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [mcpTokens.userId],
+    references: [authUsers.id],
+  }),
+}))
+
+export const authUsersRelations = relations(authUsers, ({ many }) => ({
+  mcpTokens: many(mcpTokens),
+}))
+
+
 

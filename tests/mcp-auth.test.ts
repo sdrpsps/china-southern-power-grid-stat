@@ -34,6 +34,26 @@ function useTempDb() {
   delete process.env.MCP_TOKEN_EXPIRES_IN_DAYS
 }
 
+async function ensureMockUser(userId = "admin-user") {
+  const { getDb } = await import("@/lib/db/client")
+  const { authUsers } = await import("@/lib/db/schema")
+  const db = getDb()
+  try {
+    db.insert(authUsers)
+      .values({
+        id: userId,
+        name: "Admin User",
+        email: "admin@example.com",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .run()
+  } catch {
+    // ignore
+  }
+}
+
 function decodePayload(token: string) {
   return JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"))
 }
@@ -64,9 +84,10 @@ function mcpRequest(token?: string, authorization?: string) {
 }
 
 describe("MCP access token helpers", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetModules()
     useTempDb()
+    await ensureMockUser()
   })
 
   it("issues long-lived MCP-scoped tokens", async () => {
@@ -119,12 +140,13 @@ describe("MCP access token helpers", () => {
 })
 
 describe("MCP route Bearer authentication", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetModules()
     transportMocks.handleRequest.mockClear()
     transportMocks.connect.mockClear()
     transportMocks.close.mockClear()
     useTempDb()
+    await ensureMockUser()
   })
 
   it("rejects missing and malformed Authorization headers without invoking the transport", async () => {

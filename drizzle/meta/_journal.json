@@ -8,6 +8,13 @@
       "when": 1782447120137,
       "tag": "0000_even_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782448966227,
+      "tag": "0001_natural_zombie",
+      "breakpoints": true
     }
   ]
 }

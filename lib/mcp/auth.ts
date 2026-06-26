@@ -1,6 +1,10 @@
 import type { JWTPayload } from "jose"
+import { randomUUID } from "node:crypto"
+import { eq } from "drizzle-orm"
 
 import { auth } from "@/lib/auth"
+import { getDb } from "@/lib/db/client"
+import { mcpTokens } from "@/lib/db/schema"
 
 export const MCP_TOKEN_USE = "mcp"
 export const MCP_TOKEN_SCOPE = "mcp:access"
@@ -12,6 +16,7 @@ const SECONDS_PER_DAY = 24 * 60 * 60
 
 export type McpTokenPayload = JWTPayload & {
   sub: string
+  jti: string
   token_use: typeof MCP_TOKEN_USE
   scope: typeof MCP_TOKEN_SCOPE
   iat: number
@@ -45,14 +50,23 @@ export function getMcpTokenExpirationDate(now = new Date()) {
   return new Date(now.getTime() + getMcpTokenLifetimeSeconds() * 1000)
 }
 
-export async function issueMcpAccessToken(userId: string, now = new Date()): Promise<IssuedMcpAccessToken> {
+export async function issueMcpAccessToken(
+  userId: string,
+  nameOrNow?: string | Date,
+  nowArg?: Date
+): Promise<IssuedMcpAccessToken> {
+  const name = typeof nameOrNow === "string" ? nameOrNow : "Default Agent"
+  const now = nameOrNow instanceof Date ? nameOrNow : (nowArg || new Date())
+
   const iat = Math.floor(now.getTime() / 1000)
   const lifetimeSeconds = getMcpTokenLifetimeSeconds()
   const exp = iat + lifetimeSeconds
+  const jti = randomUUID()
   const { token } = await auth.api.signJWT({
     body: {
       payload: {
         sub: userId,
+        jti,
         iat,
         exp,
         token_use: MCP_TOKEN_USE,
@@ -60,6 +74,17 @@ export async function issueMcpAccessToken(userId: string, now = new Date()): Pro
       },
     },
   })
+
+  const db = getDb()
+  db.insert(mcpTokens)
+    .values({
+      tokenKey: jti,
+      name,
+      userId,
+      expiresAt: new Date(exp * 1000).toISOString(),
+      createdAt: now.toISOString(),
+    })
+    .run()
 
   return {
     token,
@@ -77,9 +102,19 @@ export async function verifyMcpAccessToken(token: string): Promise<McpTokenPaylo
 
   if (!payload) return null
   if (typeof payload.sub !== "string" || !payload.sub) return null
+  if (typeof payload.jti !== "string" || !payload.jti) return null
   if (payload.token_use !== MCP_TOKEN_USE) return null
   if (payload.scope !== MCP_TOKEN_SCOPE) return null
   if (typeof payload.iat !== "number" || typeof payload.exp !== "number") return null
+
+  const db = getDb()
+  const tokenRecord = db
+    .select()
+    .from(mcpTokens)
+    .where(eq(mcpTokens.tokenKey, payload.jti))
+    .get()
+
+  if (!tokenRecord) return null
 
   return payload as McpTokenPayload
 }

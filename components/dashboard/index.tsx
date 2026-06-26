@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { RefreshCwIcon, LogOut, Key, Copy, Check } from "lucide-react"
+import { RefreshCwIcon, LogOut, Key } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 import { Badge } from "@/components/ui/badge"
@@ -23,23 +23,7 @@ import type {
 import { initialState } from "@/components/dashboard/types"
 import { maskAccountNumber, maskName } from "@/lib/services/privacy"
 import type { PublicProfile } from "@/lib/services/types"
-
-type McpTokenPayload = {
-  token: string
-  expiresAt: string
-  lifetimeDays: number
-  lifetimeSeconds: number
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
+import { TokenDialog } from "./token-dialog"
 
 export function DashboardClient() {
   const router = useRouter()
@@ -47,33 +31,13 @@ export function DashboardClient() {
   const [selectedProfile, setSelectedProfile] = useState<string>("")
   const [scope, setScope] = useState("profile")
 
-  // MCP 访问凭证和安全登出状态
-  const [jwtToken, setJwtToken] = useState<string | null>(null)
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<string | null>(null)
-  const [tokenLifetimeDays, setTokenLifetimeDays] = useState<number | null>(null)
+  // MCP 访问凭证状态
   const [showTokenModal, setShowTokenModal] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   async function handleLogout() {
     await authClient.signOut()
     router.push("/login")
     router.refresh()
-  }
-
-  async function showToken() {
-    const data = await api<McpTokenPayload>("/api/mcp/token")
-    setJwtToken(data.token)
-    setTokenExpiresAt(data.expiresAt)
-    setTokenLifetimeDays(data.lifetimeDays)
-    setShowTokenModal(true)
-  }
-
-  function handleCopy() {
-    if (jwtToken) {
-      navigator.clipboard.writeText(jwtToken)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
   }
   const [accountsState, setAccountsState] =
     useState<ApiState<AccountsPayload>>(initialState)
@@ -371,7 +335,7 @@ export function DashboardClient() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={showToken} className="gap-2">
+            <Button variant="outline" onClick={() => setShowTokenModal(true)} className="gap-2">
               <Key className="h-4 w-4" />
               查看 MCP 凭证
             </Button>
@@ -439,71 +403,11 @@ export function DashboardClient() {
             onQueryBalances={queryBalancesAction}
             onQueryUsage={queryUsageAction}
             onVerifySessions={verifySessions}
-            />
+          />
         </section>
+
         {showTokenModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="relative w-full max-w-lg overflow-hidden rounded-lg border bg-card p-6 text-card-foreground shadow-2xl transition-all animate-in zoom-in-95 duration-200">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between border-b pb-3">
-                  <div className="flex items-center gap-2">
-                    <Key data-icon="inline-start" />
-                    <span className="text-lg font-semibold">Agent MCP 访问凭证</span>
-                  </div>
-                  <button
-                    onClick={() => setShowTokenModal(false)}
-                    className="rounded-lg p-1 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
-                    aria-label="关闭 MCP 凭证弹窗"
-                  >
-                    x
-                  </button>
-                </div>
-
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  这是用于 Agent MCP 配置的长期访问凭证。请在 MCP 请求头中携带：
-                  <br />
-                  <code>Authorization: Bearer &lt;你的TOKEN&gt;</code>
-                </p>
-
-                <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-                  有效期：
-                  {tokenLifetimeDays ? `${tokenLifetimeDays} 天` : "长期"}
-                  {tokenExpiresAt ? `，到期时间 ${formatDateTime(tokenExpiresAt)}` : ""}
-                </div>
-
-                <div className="relative rounded-lg border bg-muted/40 p-3">
-                  <textarea
-                    readOnly
-                    value={jwtToken || ""}
-                    className="h-32 w-full resize-none bg-transparent font-mono text-xs text-foreground focus:outline-none"
-                  />
-                  <div className="absolute bottom-2 right-2">
-                    <Button
-                      size="sm"
-                      onClick={handleCopy}
-                      className="h-8 gap-1.5"
-                    >
-                      {copied ? (
-                        <>
-                          <Check data-icon="inline-start" />
-                          已复制
-                        </>
-                      ) : (
-                        <>
-                          <Copy data-icon="inline-start" />
-                          复制凭证
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-t pt-3 text-[10px] text-muted-foreground">
-                  提示：此凭证是长期有效的 API secret。请妥善保管，不要在聊天中粘贴完整 token；泄露后请重新生成并更新 Agent 配置，或轮换服务端签名密钥。
-                </div>
-              </div>
-            </div>
-          </div>
+          <TokenDialog open={showTokenModal} onClose={() => setShowTokenModal(false)} />
         )}
       </div>
     </main>
